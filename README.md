@@ -15,11 +15,11 @@ The default "look-back" period is 1 day, but can be augmented with the `--days <
 
 The easiest way to run:
 
-> `docker run -v ~/.lacework.toml:/home/user/.lacework.toml alannix/auto-scan`
+> `docker run -v ~/.lacework.toml:/home/user/.lacework.toml alannix/container-auto-scan`
 
 This will mount your Lacework CLI credentials into the container and execute the scan on the default profile. You can, of course, pass in a different profile:
 
-> `docker run -v ~/.lacework.toml:/home/user/.lacework.toml alannix/auto-scan -p <profile>`
+> `docker run -v ~/.lacework.toml:/home/user/.lacework.toml alannix/container-auto-scan -p <profile>`
 
 Or you can provide credentials using the `--account`, `--subaccount`, `--api-key`, `--api-secret` arguments.
 
