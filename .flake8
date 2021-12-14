@@ -1,0 +1,11 @@
+[flake8]
+inline-quotes = single
+max-line-length = 127
+exclude =
+    .git/,
+    .idea/,
+    .venv/,
+    .vscode/,
+    __pycache__,
+    dist/,
+    venv/,
