@@ -3,17 +3,19 @@
 import argparse
 import logging
 import os
+import time
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 from laceworksdk import LaceworkClient
 
+INTERVAL = 1200
 PAGINATION_MAX = 5000
 WORKER_THREADS = 10
 
 
-def build_container_assessment_cache(lw_client):
+def build_container_assessment_cache(lw_client, start_time, end_time):
     print(f'Fetching container assessments since "{start_time}"...')
 
     scanned_containers = lw_client.vulnerabilities.get_container_assessments_by_date(
@@ -48,7 +50,7 @@ def get_container_registry_domains(lw_client):
 
     for container_registry in container_registries['data']:
         container_registry_domain = container_registry['data'].get('registryDomain', None)
-        if container_registry_domain:
+        if container_registry['enabled'] and container_registry_domain:
             container_registry_domains.append(container_registry_domain)
 
     print(f'Returned Container Domains: {container_registry_domains}')
@@ -56,48 +58,52 @@ def get_container_registry_domains(lw_client):
     return container_registry_domains
 
 
-def build_integrated_registries_query(registries):
-    query_text = """ContainersByRegistry {
-        source {
+def build_integrated_registry_query(registry):
+    query_text = f"""ContainersByRegistry {{
+        source {{
             LW_HE_CONTAINERS
-        }
-        filter {"""
-
-    for registry in registries:
-        query_text += f"starts_with(REPO, '{registry}') OR "
-    query_text = query_text[:-4]
-
-    query_text += """}
-        return distinct {REPO, TAG}
-        }
-    """
+        }}
+        filter {{
+            starts_with(REPO, '{registry}')
+        }}
+        return distinct {{REPO, TAG}}
+    }}"""
 
     logging.debug(f'LQL Query is: {query_text}')
 
     return query_text
 
 
-def get_active_containers(lw_client, container_registry_domains):
+def get_active_containers(lw_client, container_registry_domains, start_time, end_time):
+
+    active_containers = []
 
     # Query for active containers across registries
-    response = lw_client.queries.execute(
-        evaluator_id='<<IMPLICIT>>',
-        query_text=build_integrated_registries_query(container_registry_domains),
-        arguments={
-            'StartTimeRange': start_time,
-            'EndTimeRange': end_time,
-        }
-    )
+    for container_registry_domain in container_registry_domains:
+        print(f'Fetching active containers for {container_registry_domain}...')
 
-    num_returned = len(response.get('data', {}))
-    if num_returned == PAGINATION_MAX:
-        logging.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
-    print(f'Active Container Count: {num_returned}')
+        response = lw_client.queries.execute(
+            evaluator_id='<<IMPLICIT>>',
+            query_text=build_integrated_registry_query(container_registry_domain),
+            arguments={
+                'StartTimeRange': start_time,
+                'EndTimeRange': end_time,
+            }
+        )
 
-    return response
+        response_containers = response.get('data', [])
+
+        num_returned = len(response_containers)
+        if num_returned == PAGINATION_MAX:
+            logging.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
+        print(f'Found {num_returned} active containers for {container_registry_domain}...')
+
+        active_containers += response_containers
+
+    return active_containers
 
 
-def initiate_container_scan(container_registry, container_repository, container_tag):
+def initiate_container_scan(lw_client, container_registry, container_repository, container_tag):
     try:
         lw_client.vulnerabilities.initiate_container_scan(
             container_registry,
@@ -110,7 +116,7 @@ def initiate_container_scan(container_registry, container_repository, container_
         logging.warning(message)
 
 
-def scan_containers(containers, scanned_container_cache):
+def scan_containers(lw_client, containers, scanned_container_cache):
     print(f'Container Count: {len(containers)}')
 
     i = 1
@@ -131,33 +137,13 @@ def scan_containers(containers, scanned_container_cache):
             print(f'Scanning {container_registry}/{container_repository} with tag "{container["TAG"]}" ({i})')
 
             executor_tasks.append(executor.submit(
-                initiate_container_scan, container_registry, container_repository, container['TAG']
+                initiate_container_scan, lw_client, container_registry, container_repository, container['TAG']
             ))
 
             i += 1
 
 
-if __name__ == '__main__':
-
-    # Set up an argument parser
-    parser = argparse.ArgumentParser(
-        description='A script to automatically issue container vulnerability scans to Lacework based on running containers'
-    )
-
-    parser.add_argument('--account', default=os.environ.get('LW_ACCOUNT', None), help='The Lacework account')
-    parser.add_argument('--subaccount', default=os.environ.get('LW_SUBACCOUNT', None), help='The Lacework sub-account')
-    parser.add_argument('--api-key', dest='api_key', default=os.environ.get('LW_API_KEY', None), help='The Lacework API key')
-    parser.add_argument(
-        '--api-secret', dest='api_secret', default=os.environ.get('LW_API_SECRET', None), help='The Lacework API secret'
-    )
-    parser.add_argument('-p', '--profile', default=os.environ.get('LW_PROFILE', None), help='The Lacework CLI profile')
-    parser.add_argument('--days', default=None, type=int, help='The number of days in which to search for active containers')
-    parser.add_argument('--hours', default=0, type=int, help='The number of hours in which to search for active containers')
-    parser.add_argument('--registry', help='The container registry domain for which to issue scans')
-    parser.add_argument('--rescan', dest='rescan', action='store_true')
-    parser.add_argument('--debug', action='store_true')
-    args = parser.parse_args()
-
+def main(args):
     try:
         lw_client = LaceworkClient(
             account=args.account,
@@ -190,7 +176,7 @@ if __name__ == '__main__':
     if args.rescan:
         scanned_container_cache = {}
     else:
-        scanned_container_cache = build_container_assessment_cache(lw_client)
+        scanned_container_cache = build_container_assessment_cache(lw_client, start_time, end_time)
 
     # If a registry is specified, use that - otherwise, scan containers from all integrated domains
     if args.registry:
@@ -199,7 +185,38 @@ if __name__ == '__main__':
         container_registry_domains = get_container_registry_domains(lw_client)
 
     # Query for active containers across registries
-    active_containers = get_active_containers(lw_client, container_registry_domains)
+    active_containers = get_active_containers(lw_client, container_registry_domains, start_time, end_time)
 
     # Scan all the containers
-    scan_containers(active_containers.get('data', []), scanned_container_cache)
+    scan_containers(lw_client, active_containers, scanned_container_cache)
+
+
+if __name__ == '__main__':
+
+    # Set up an argument parser
+    parser = argparse.ArgumentParser(
+        description='A script to automatically issue container vulnerability scans to Lacework based on running containers'
+    )
+
+    parser.add_argument('--account', default=os.environ.get('LW_ACCOUNT', None), help='The Lacework account')
+    parser.add_argument('--subaccount', default=os.environ.get('LW_SUBACCOUNT', None), help='The Lacework sub-account')
+    parser.add_argument('--api-key', dest='api_key', default=os.environ.get('LW_API_KEY', None), help='The Lacework API key')
+    parser.add_argument(
+        '--api-secret', dest='api_secret', default=os.environ.get('LW_API_SECRET', None), help='The Lacework API secret'
+    )
+    parser.add_argument('-p', '--profile', default=os.environ.get('LW_PROFILE', None), help='The Lacework CLI profile')
+    parser.add_argument('--days', default=None, type=int, help='The number of days in which to search for active containers')
+    parser.add_argument('--hours', default=0, type=int, help='The number of hours in which to search for active containers')
+    parser.add_argument('--registry', help='The container registry domain for which to issue scans')
+    parser.add_argument('--rescan', dest='rescan', action='store_true')
+    parser.add_argument('-d', '--daemon', action='store_true')
+    parser.add_argument('--debug', action='store_true')
+    args = parser.parse_args()
+
+    # If a daemon, create an infinite loop
+    if args.daemon:
+        while True:
+            main(args)
+            time.sleep(INTERVAL)
+    else:
+        main(args)

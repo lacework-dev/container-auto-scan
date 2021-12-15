@@ -29,4 +29,4 @@ The script can also read the standard Lacework CLI environment variables for aut
 
 - Due to Lacework API limitations, only 400 containers can be scanned in a single hour.
 - Due to Lacework API limitations, only 5000 scanned container images (for de-duplication) will get returned.
-- Due to Lacework API limitations, only 5000 container repo/tag combinations will get returned.
+- Due to Lacework API limitations, only 5000 container repo/tag combinations will get returned per registry.
