@@ -51,7 +51,11 @@ def get_container_registry_domains(lw_client):
     for container_registry in container_registries['data']:
         container_registry_domain = container_registry['data'].get('registryDomain', None)
         if container_registry['enabled'] and container_registry_domain:
-            container_registry_domains.append(container_registry_domain)
+            if container_registry_domain == 'index.docker.io':
+                container_registry_domain = 'docker.io'
+
+            if container_registry_domain not in container_registry_domains:
+                container_registry_domains.append(container_registry_domain)
 
     print(f'Returned Container Domains: {container_registry_domains}')
 
@@ -104,6 +108,9 @@ def get_active_containers(lw_client, container_registry_domains, start_time, end
 
 
 def initiate_container_scan(lw_client, container_registry, container_repository, container_tag):
+    if container_registry == 'docker.io':
+        container_registry = 'index.docker.io'
+
     try:
         lw_client.vulnerabilities.initiate_container_scan(
             container_registry,
