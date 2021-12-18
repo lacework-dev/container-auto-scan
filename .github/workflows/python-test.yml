@@ -2,6 +2,9 @@ name: Run Python Tests/Linting
 
 on:
   push:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: "0 0 * * *"
 
