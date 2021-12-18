@@ -106,11 +106,10 @@ def get_active_containers(lw_client, container_registry_domains, start_time, end
 
     return active_containers
 
+
 def list_containers(containers):
     for container in containers:
-        # Parse the container registry and repository
-        container_registry, container_repository = container['REPO'].split('/', 1)
-        print(f'{container_registry}/{container_repository}:{container["TAG"]}')
+        print(f'{container["REPO"]}:{container["TAG"]}')
 
 
 def initiate_container_scan(lw_client, container_registry, container_repository, container_tag):
@@ -149,8 +148,8 @@ def scan_containers(lw_client, containers, scanned_container_cache):
             print(f'Scanning {container_registry}/{container_repository} with tag "{container["TAG"]}" ({i})')
 
             executor_tasks.append(executor.submit(
-                    initiate_container_scan, lw_client, container_registry, container_repository, container['TAG']
-                ))
+                initiate_container_scan, lw_client, container_registry, container_repository, container['TAG']
+            ))
 
             i += 1
 
@@ -171,12 +170,10 @@ def main(args):
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
-    
     if args.days:
         days_back = args.days
     else:
         days_back = 1
-                
     # Build start/end times
     current_time = datetime.now(timezone.utc)
     start_time = current_time - timedelta(hours=args.hours, days=days_back)
@@ -204,7 +201,6 @@ def main(args):
     else:
         # Scan all the containers
         scan_containers(lw_client, active_containers, scanned_container_cache, args.inline)
-    
 
 if __name__ == '__main__':
 
