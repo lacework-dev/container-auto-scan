@@ -54,7 +54,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${DOCKER_TEST_TAG}
+          tags: ${{ env.DOCKER_TEST_TAG }}
 
       - name: Download Lacework Scanner
         run: |
