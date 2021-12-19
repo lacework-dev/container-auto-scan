@@ -127,6 +127,7 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
             f'{container_tag}". Error: {e}'
         logging.warning(message)
 
+
 def scan_containers(lw_client, containers, scanned_container_cache):
     print(f'Container Count: {len(containers)}')
 
@@ -201,6 +202,7 @@ def main(args):
     else:
         # Scan all the containers
         scan_containers(lw_client, active_containers, scanned_container_cache, args.inline)
+
 
 if __name__ == '__main__':
 
