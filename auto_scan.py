@@ -201,7 +201,7 @@ def main(args):
         list_containers(active_containers)
     else:
         # Scan all the containers
-        scan_containers(lw_client, active_containers, scanned_container_cache, args.inline)
+        scan_containers(lw_client, active_containers, scanned_container_cache)
 
 
 if __name__ == '__main__':
