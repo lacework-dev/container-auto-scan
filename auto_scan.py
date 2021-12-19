@@ -107,6 +107,11 @@ def get_active_containers(lw_client, container_registry_domains, start_time, end
     return active_containers
 
 
+def list_containers(containers):
+    for container in containers:
+        print(f'{container["REPO"]}:{container["TAG"]}')
+
+
 def initiate_container_scan(lw_client, container_registry, container_repository, container_tag):
     if container_registry == 'docker.io':
         container_registry = 'index.docker.io'
@@ -121,7 +126,6 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
             f'{container_tag}". Error: {e}'
         logging.warning(message)
-
 
 def scan_containers(lw_client, containers, scanned_container_cache):
     print(f'Container Count: {len(containers)}')
@@ -166,12 +170,10 @@ def main(args):
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
-
     if args.days:
         days_back = args.days
     else:
         days_back = 1
-
     # Build start/end times
     current_time = datetime.now(timezone.utc)
     start_time = current_time - timedelta(hours=args.hours, days=days_back)
@@ -194,9 +196,11 @@ def main(args):
     # Query for active containers across registries
     active_containers = get_active_containers(lw_client, container_registry_domains, start_time, end_time)
 
-    # Scan all the containers
-    scan_containers(lw_client, active_containers, scanned_container_cache)
-
+    if args.listOnly:
+        list_containers(active_containers)
+    else:
+        # Scan all the containers
+        scan_containers(lw_client, active_containers, scanned_container_cache, args.inline)
 
 if __name__ == '__main__':
 
@@ -216,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--hours', default=0, type=int, help='The number of hours in which to search for active containers')
     parser.add_argument('--registry', help='The container registry domain for which to issue scans')
     parser.add_argument('--rescan', dest='rescan', action='store_true')
+    parser.add_argument('--list-only', dest='listOnly', action='store_true')
     parser.add_argument('-d', '--daemon', action='store_true')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
