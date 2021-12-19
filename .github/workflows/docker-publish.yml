@@ -19,7 +19,7 @@ jobs:
       LW_SCANNER_SAVE_RESULTS: true
       LW_SCANNER_SCAN_LIBRARY_PACKAGES: true
       DOCKER_REPO: alannix/container-auto-scan
-      DOCKER_TEST_TAG: testing
+      DOCKER_TEST_NAME: alannix/container-auto-scan-test
     steps:
 
       - name: Checkout
@@ -54,7 +54,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ env.DOCKER_TEST_TAG }}
+          tags: ${{ env.DOCKER_TEST_NAME }}
 
       - name: Download Lacework Scanner
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Lacework Image Assurance Scan
         run: |
-          ./lw-scanner image evaluate ${DOCKER_REPO} ${DOCKER_TEST_TAG} --build-id ${{ github.run_id }}
+          ./lw-scanner image evaluate ${DOCKER_TEST_NAME} latest --build-id ${{ github.run_id }}
 
       - name: Build and Publish to Docker
         uses: docker/build-push-action@v2
