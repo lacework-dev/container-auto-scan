@@ -35,7 +35,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${DOCKER_REPO}
+          images: ${{ env.DOCKER_REPO }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
