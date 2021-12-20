@@ -197,7 +197,7 @@ def main(args):
     # Query for active containers across registries
     active_containers = get_active_containers(lw_client, container_registry_domains, start_time, end_time)
 
-    if args.listOnly:
+    if args.list_only:
         list_containers(active_containers)
     else:
         # Scan all the containers
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--hours', default=0, type=int, help='The number of hours in which to search for active containers')
     parser.add_argument('--registry', help='The container registry domain for which to issue scans')
     parser.add_argument('--rescan', dest='rescan', action='store_true')
-    parser.add_argument('--list-only', dest='listOnly', action='store_true')
+    parser.add_argument('--list-only', dest='list_only', action='store_true')
     parser.add_argument('-d', '--daemon', action='store_true')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
