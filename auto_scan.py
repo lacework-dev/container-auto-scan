@@ -164,17 +164,17 @@ def main(args):
             api_secret=args.api_secret,
             profile=args.profile
         )
-    except Exception as e:
-        logging.error(e)
-        parser.print_help()
-        exit()
+    except Exception:
+        raise
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
+
     if args.days:
         days_back = args.days
     else:
         days_back = 1
+
     # Build start/end times
     current_time = datetime.now(timezone.utc)
     start_time = current_time - timedelta(hours=args.hours, days=days_back)
@@ -205,12 +205,10 @@ def main(args):
 
 
 if __name__ == '__main__':
-
     # Set up an argument parser
     parser = argparse.ArgumentParser(
         description='A script to automatically issue container vulnerability scans to Lacework based on running containers'
     )
-
     parser.add_argument('--account', default=os.environ.get('LW_ACCOUNT', None), help='The Lacework account')
     parser.add_argument('--subaccount', default=os.environ.get('LW_SUBACCOUNT', None), help='The Lacework sub-account')
     parser.add_argument('--api-key', dest='api_key', default=os.environ.get('LW_API_KEY', None), help='The Lacework API key')
@@ -227,10 +225,14 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
-    # If a daemon, create an infinite loop
-    if args.daemon:
-        while True:
+    try:
+        # If a daemon, create an infinite loop
+        if args.daemon:
+            while True:
+                main(args)
+                time.sleep(INTERVAL)
+        else:
             main(args)
-            time.sleep(INTERVAL)
-    else:
-        main(args)
+    except Exception as e:
+        logging.error(e)
+        parser.print_help()
