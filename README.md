@@ -1,6 +1,6 @@
 # Lacework Auto Scanner
 
-This project aims to make it easy to trigger vulnerability assessments for active containers that have integrated container registries within Lacework.
+The aim of this project is to make it simple to trigger vulnerability assessments for containers which are active and have integrated container registries in Lacework.
 
 ## How It Works
 
@@ -9,7 +9,7 @@ The default "look-back" period is 1 day, but can be augmented with the `--days <
 1. The script will download a report of all scanned containers for the "look-back" period. Containers that have already been scanned will be skipped by default. This can be overwritten with the `--rescan` flag.
 2. The script will enumerate all integrated container registries, gathering the domains that can be scanned. This can be overwritten with the `--registry <registry_domain>` argument.
 3. The script will run an LQL query against the specified Lacework account to gather distinct container repository/tag combinations that have run in the environment over the "look-back" period for the integrated domains.
-4. The script will then issue container scan requests over the Lacework API for the containers.
+4. The script will then issue container scan requests for the running containers via the Lacework API.
 
 ## How To Run
 
