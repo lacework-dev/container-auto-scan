@@ -1,0 +1,46 @@
+import argparse
+
+import pytest
+
+from auto_scan import get_container_registry_domains, main
+from laceworksdk import LaceworkClient
+
+lw_client = LaceworkClient()
+
+
+def test_get_container_registry_domains():
+    response = get_container_registry_domains(lw_client)
+    assert(type(response) == list)
+
+
+def test_main_default():
+    args = argparse.Namespace(account=None,
+                              subaccount=None,
+                              api_key=None,
+                              api_secret=None,
+                              profile=None,
+                              days=None,
+                              hours=0,
+                              registry=None,
+                              rescan=None,
+                              list_only=None,
+                              daemon=None,
+                              debug=None)
+    main(args)
+
+
+def test_main_config_fail():
+    args = argparse.Namespace(account='testing',
+                              subaccount=None,
+                              api_key=None,
+                              api_secret=None,
+                              profile=None,
+                              days=None,
+                              hours=0,
+                              registry=None,
+                              rescan=None,
+                              list_only=None,
+                              daemon=None,
+                              debug=None)
+    with pytest.raises(Exception):
+        main(args)
