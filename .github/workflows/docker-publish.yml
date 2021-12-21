@@ -13,7 +13,7 @@ on:
     types: [published]
 
 jobs:
-  docker:
+  docker_build:
     runs-on: ubuntu-latest
     env:
       LW_ACCESS_TOKEN: ${{ secrets.LW_ACCESS_TOKEN }}
@@ -69,10 +69,11 @@ jobs:
           ./lw-scanner image evaluate ${DOCKER_TEST_NAME} latest --build-id ${{ github.run_id }}
 
       - name: Build and Publish to Docker
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v2
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
