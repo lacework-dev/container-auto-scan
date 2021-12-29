@@ -209,20 +209,71 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='A script to automatically issue container vulnerability scans to Lacework based on running containers'
     )
-    parser.add_argument('--account', default=os.environ.get('LW_ACCOUNT', None), help='The Lacework account')
-    parser.add_argument('--subaccount', default=os.environ.get('LW_SUBACCOUNT', None), help='The Lacework sub-account')
-    parser.add_argument('--api-key', dest='api_key', default=os.environ.get('LW_API_KEY', None), help='The Lacework API key')
     parser.add_argument(
-        '--api-secret', dest='api_secret', default=os.environ.get('LW_API_SECRET', None), help='The Lacework API secret'
+        '--account',
+        default=os.environ.get('LW_ACCOUNT', None),
+        help='The Lacework account to use'
     )
-    parser.add_argument('-p', '--profile', default=os.environ.get('LW_PROFILE', None), help='The Lacework CLI profile')
-    parser.add_argument('--days', default=None, type=int, help='The number of days in which to search for active containers')
-    parser.add_argument('--hours', default=0, type=int, help='The number of hours in which to search for active containers')
-    parser.add_argument('--registry', help='The container registry domain for which to issue scans')
-    parser.add_argument('--rescan', dest='rescan', action='store_true')
-    parser.add_argument('--list-only', dest='list_only', action='store_true')
-    parser.add_argument('-d', '--daemon', action='store_true')
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument(
+        '--subaccount',
+        default=os.environ.get('LW_SUBACCOUNT', None),
+        help='The Lacework sub-account to use'
+    )
+    parser.add_argument(
+        '--api-key',
+        dest='api_key',
+        default=os.environ.get('LW_API_KEY', None),
+        help='The Lacework API key to use'
+    )
+    parser.add_argument(
+        '--api-secret',
+        dest='api_secret',
+        default=os.environ.get('LW_API_SECRET', None),
+        help='The Lacework API secret to use'
+    )
+    parser.add_argument(
+        '-p', '--profile',
+        default=os.environ.get('LW_PROFILE', None),
+        help='The Lacework CLI profile to use'
+    )
+    parser.add_argument(
+        '--days',
+        default=None,
+        type=int,
+        help='The number of days in which to search for active containers'
+    )
+    parser.add_argument(
+        '--hours',
+        default=0,
+        type=int,
+        help='The number of hours in which to search for active containers'
+    )
+    parser.add_argument(
+        '--registry',
+        help='The container registry domain for which to issue scans'
+    )
+    parser.add_argument(
+        '--rescan',
+        dest='rescan',
+        action='store_true',
+        help='Issue scan requests for previously scanned containers'
+    )
+    parser.add_argument(
+        '--list-only',
+        dest='list_only',
+        action='store_true',
+        help='Only list active containers for integrated/specified registries (no scans)'
+    )
+    parser.add_argument(
+        '-d', '--daemon',
+        action='store_true',
+        help='Run the scanner as a daemon (executes every 20 minutes)'
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug logging'
+    )
     args = parser.parse_args()
 
     try:
