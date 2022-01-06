@@ -137,7 +137,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, contain
             'tag': container_tag
         }
 
-        session.post(f"{proxy_scanner_addr}/v1/scan", json=json)
+        session.post(f'{proxy_scanner_addr}/v1/scan', json=json)
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
             f'{container_tag}". Error: {e}'
