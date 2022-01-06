@@ -216,7 +216,7 @@ def main(args):
 
     # If a registry is specified, use that - otherwise, scan containers from all integrated domains
     if args.registry:
-        container_registry_domains = [args.registry]
+        container_registry_domains = [x.strip() for x in str(args.registry).split(',')]
     else:
         container_registry_domains = get_container_registry_domains(lw_client)
 
@@ -282,7 +282,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--registry',
-        help='The container registry domain for which to issue scans'
+        help='The container registry domain(s) for which to issue scans (comma separated)'
     )
     parser.add_argument(
         '--rescan',

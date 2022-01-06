@@ -40,7 +40,6 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 
 ## Arguments
 
-|       | `--registry`   | `None`  | The container registry domain for which to issue scans                     |
 | short | long              | default | help                                                                        |
 | :---- | :---------------- | :------ | :-------------------------------------------------------------------------- |
 | `-h`  | `--help`          |         | show this help message and exit                                             |
@@ -52,6 +51,7 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 |       | `--proxy-scanner` | `None`  | The address of a Lacework proxy scanner (http(s)://<address>:<port>)        |
 |       | `--days`          | `None`  | The number of days in which to search for active containers                 |
 |       | `--hours`         | `0`     | The number of hours in which to search for active containers                |
+|       | `--registry`      | `None`  | The container registry domain(s) for which to issue scans (comma separated) |
 |       | `--rescan`        |         | Issue scan requests for previously scanned containers                       |
 |       | `--list-only`     |         | Only list active containers for integrated/specified registries (no scans)  |
 | `-d`  | `--daemon`        |         | Run the scanner as a daemon (executes every 20 minutes)                     |
