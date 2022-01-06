@@ -124,7 +124,7 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         )
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-            f'{container_tag}". Error: {e}'
+                  f'{container_tag}". Error: {e}'
         logging.warning(message)
 
 
@@ -140,7 +140,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, contain
         session.post(f'{proxy_scanner_addr}/v1/scan', json=json)
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-            f'{container_tag}". Error: {e}'
+                  f'{container_tag}". Error: {e}'
         logging.warning(message)
 
 
@@ -266,7 +266,7 @@ if __name__ == '__main__':
         '--proxy-scanner',
         default=None,
         type=str,
-        help='The <address>:<port> of a Lacework proxy scanner'
+        help='The address of a Lacework proxy scanner (http(s)://<address>:<port>)'
     )
     parser.add_argument(
         '--days',

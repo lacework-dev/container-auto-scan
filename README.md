@@ -31,7 +31,7 @@ The script can also read the standard Lacework CLI environment variables for aut
 If cloning this repository, rather than using a container, you can run the script with the following usage:
 
 ```bash
-usage: ./auto_scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [-d] [--debug]
+usage: argmark [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [-d] [--debug]
 ```
 
 ### Kubernetes Manifest
@@ -40,21 +40,22 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 
 ## Arguments
 
-| short | long           | default | help                                                                       |
-| :---- | :------------- | :------ | :------------------------------------------------------------------------- |
-| `-h`  | `--help`       |         | show this help message and exit                                            |
-|       | `--account`    | `None`  | The Lacework account to use                                                |
-|       | `--subaccount` | `None`  | The Lacework sub-account to use                                            |
-|       | `--api-key`    | `None`  | The Lacework API key to use                                                |
-|       | `--api-secret` | `None`  | The Lacework API secret to use                                             |
-| `-p`  | `--profile`    | `None`  | The Lacework CLI profile to use                                            |
-|       | `--days`       | `None`  | The number of days in which to search for active containers                |
-|       | `--hours`      | `0`     | The number of hours in which to search for active containers               |
 |       | `--registry`   | `None`  | The container registry domain for which to issue scans                     |
-|       | `--rescan`     |         | Issue scan requests for previously scanned containers                      |
-|       | `--list-only`  |         | Only list active containers for integrated/specified registries (no scans) |
-| `-d`  | `--daemon`     |         | Run the scanner as a daemon (executes every 20 minutes)                    |
-|       | `--debug`      |         | Enable debug logging                                                       |
+| short | long              | default | help                                                                        |
+| :---- | :---------------- | :------ | :-------------------------------------------------------------------------- |
+| `-h`  | `--help`          |         | show this help message and exit                                             |
+|       | `--account`       | `None`  | The Lacework account to use                                                 |
+|       | `--subaccount`    | `None`  | The Lacework sub-account to use                                             |
+|       | `--api-key`       | `None`  | The Lacework API key to use                                                 |
+|       | `--api-secret`    | `None`  | The Lacework API secret to use                                              |
+| `-p`  | `--profile`       | `None`  | The Lacework CLI profile to use                                             |
+|       | `--proxy-scanner` | `None`  | The address of a Lacework proxy scanner (http(s)://<address>:<port>)        |
+|       | `--days`          | `None`  | The number of days in which to search for active containers                 |
+|       | `--hours`         | `0`     | The number of hours in which to search for active containers                |
+|       | `--rescan`        |         | Issue scan requests for previously scanned containers                       |
+|       | `--list-only`     |         | Only list active containers for integrated/specified registries (no scans)  |
+| `-d`  | `--daemon`        |         | Run the scanner as a daemon (executes every 20 minutes)                     |
+|       | `--debug`         |         | Enable debug logging                                                        |
 
 ## Environment Variables
 
