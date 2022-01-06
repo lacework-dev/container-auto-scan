@@ -5,6 +5,8 @@ import logging
 import os
 import time
 
+import requests
+
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -113,8 +115,6 @@ def list_containers(containers):
 
 
 def initiate_container_scan(lw_client, container_registry, container_repository, container_tag):
-    if container_registry == 'docker.io':
-        container_registry = 'index.docker.io'
 
     try:
         lw_client.vulnerabilities.initiate_container_scan(
@@ -128,7 +128,23 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         logging.warning(message)
 
 
-def scan_containers(lw_client, containers, scanned_container_cache):
+def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, container_repository, container_tag):
+
+    try:
+        json = {
+            'registry': container_registry,
+            'image_name': container_repository,
+            'tag': container_tag
+        }
+
+        session.post(f"{proxy_scanner_addr}/v1/scan", json=json)
+    except Exception as e:
+        message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
+            f'{container_tag}". Error: {e}'
+        logging.warning(message)
+
+
+def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanner_addr):
     print(f'Container Count: {len(containers)}')
 
     i = 1
@@ -139,18 +155,28 @@ def scan_containers(lw_client, containers, scanned_container_cache):
 
             # Parse the container registry and repository
             container_registry, container_repository = container['REPO'].split('/', 1)
+            container_tag = container['TAG']
+
+            if container_registry == 'docker.io':
+                container_registry = 'index.docker.io'
 
             # Skip if the container was previously scanned in the current window
             if container_repository in scanned_container_cache.keys():
-                if container['TAG'] in scanned_container_cache[container_repository]:
-                    print(f'Skipping previously scanned {container_repository} with tag "{container["TAG"]}"')
+                if container_tag in scanned_container_cache[container_repository]:
+                    print(f'Skipping previously scanned {container_repository} with tag "{container_tag}"')
                     continue
 
-            print(f'Scanning {container_registry}/{container_repository} with tag "{container["TAG"]}" ({i})')
+            print(f'Scanning {container_registry}/{container_repository} with tag "{container_tag}" ({i})')
 
-            executor_tasks.append(executor.submit(
-                initiate_container_scan, lw_client, container_registry, container_repository, container['TAG']
-            ))
+            if proxy_scanner_addr:
+                session = requests.Session()
+                executor_tasks.append(executor.submit(
+                    initiate_proxy_scan, session, proxy_scanner_addr, container_registry, container_repository, container_tag
+                ))
+            else:
+                executor_tasks.append(executor.submit(
+                    initiate_container_scan, lw_client, container_registry, container_repository, container_tag
+                ))
 
             i += 1
 
@@ -201,7 +227,7 @@ def main(args):
         list_containers(active_containers)
     else:
         # Scan all the containers
-        scan_containers(lw_client, active_containers, scanned_container_cache)
+        scan_containers(lw_client, active_containers, scanned_container_cache, args.proxy_scanner)
 
 
 if __name__ == '__main__':
@@ -235,6 +261,12 @@ if __name__ == '__main__':
         '-p', '--profile',
         default=os.environ.get('LW_PROFILE', None),
         help='The Lacework CLI profile to use'
+    )
+    parser.add_argument(
+        '--proxy-scanner',
+        default=None,
+        type=str,
+        help='The <address>:<port> of a Lacework proxy scanner'
     )
     parser.add_argument(
         '--days',
