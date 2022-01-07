@@ -267,7 +267,7 @@ if __name__ == '__main__':
         '--proxy-scanner',
         default=None,
         type=str,
-        help='The address of a Lacework proxy scanner (http(s)://<address>:<port>)'
+        help='The address of a Lacework proxy scanner: http(s)://[address]:[port]'
     )
     parser.add_argument(
         '--days',

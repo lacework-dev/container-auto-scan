@@ -48,7 +48,7 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 |       | `--api-key`       | `None`  | The Lacework API key to use                                                 |
 |       | `--api-secret`    | `None`  | The Lacework API secret to use                                              |
 | `-p`  | `--profile`       | `None`  | The Lacework CLI profile to use                                             |
-|       | `--proxy-scanner` | `None`  | The address of a Lacework proxy scanner (http(s)://<address>:<port>)        |
+|       | `--proxy-scanner` | `None`  | The address of a Lacework proxy scanner: http(s)://[address]:[port]         |
 |       | `--days`          | `None`  | The number of days in which to search for active containers                 |
 |       | `--hours`         | `0`     | The number of hours in which to search for active containers                |
 |       | `--registry`      | `None`  | The container registry domain(s) for which to issue scans (comma separated) |
