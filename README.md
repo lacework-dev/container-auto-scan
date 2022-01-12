@@ -31,7 +31,7 @@ The script can also read the standard Lacework CLI environment variables for aut
 If cloning this repository, rather than using a container, you can run the script with the following usage:
 
 ```bash
-usage: argmark [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [-d] [--debug]
+usage: ./auto-scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [-d] [--debug]
 ```
 
 ### Kubernetes Manifest
