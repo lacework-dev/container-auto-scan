@@ -301,18 +301,7 @@ def main(args):
     active_containers = []
     # inline scanner usage doesn't need to lookup registries that are configured
     if args.use_inline_scanner:
-        executable_path = 'lw-scanner'
-
-        if args.path_to_inline_scanner:
-            logging.debug(f'Path to inline scanner: {args.path_to_inline_scanner}')
-            executable_path = args.path_to_inline_scanner
-
-        command = f'command -v {executable_path}'
-        command = command.format(quote(command))
-        split_command = command.split()
-        output = subprocess.run(split_command, check=False, capture_output=True, text=True, shell=True)
-        if output.stderr:
-            raise Exception('lw-scanner not found on host!')
+        # Removed check for whether inline scanner is installed due to guardrail findings 
 
         # TODO: Add more flags to support inline scanner flags -- assumed to save to platform and not eval policy right now
         active_containers = get_all_active_containers(lw_client, start_time, end_time)
