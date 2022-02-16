@@ -114,12 +114,12 @@ def get_all_active_containers(lw_client, start_time, end_time):
 
     active_containers = []
 
-    query_text = f"""AllContainers {{
-        source {{
+    query_text = """AllContainers {
+        source {
             LW_HE_CONTAINERS
-        }}
-        return distinct {{REPO, TAG}}
-    }}"""
+        }
+        return distinct {REPO, TAG}
+    }"""
 
     # Query for active containers across registries
     logging.debug(f'LQL Query is: {query_text}')
@@ -136,7 +136,7 @@ def get_all_active_containers(lw_client, start_time, end_time):
     response_containers = response.get('data', [])
 
     num_returned = len(response_containers)
-    #TODO: Handle pagination edge case
+    # TODO: Handle pagination edge case
     if num_returned == PAGINATION_MAX:
         logging.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
 
@@ -185,7 +185,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, contain
         logging.warning(message)
 
 
-def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanner_addr, use_inline_scanner = False):
+def scan_containers(lw_client, containers, scanned_container_cache, args):
     print(f'Container Count: {len(containers)}')
 
     i = 1
@@ -194,7 +194,6 @@ def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanne
     with ThreadPoolExecutor(max_workers=WORKER_THREADS) as executor:
         scan_errors = []
         for container in containers:
-            
             # Parse the container registry and repository
             # TODO: Edge case on repos with two+ levels of nesting...
             container_registry, container_repository = container['REPO'].split('/', 1)
@@ -202,10 +201,10 @@ def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanne
                 continue
             container_tag = container['TAG']
 
-            if container_registry == 'docker.io' and not use_inline_scanner:
+            if container_registry == 'docker.io' and not args.use_inline_scanner:
                 container_registry = 'index.docker.io'
-            
-            qualified_repo = f"{container_registry}/{container_repository}"
+
+            qualified_repo = f'{container_registry}/{container_repository}'
 
             # Skip if the container was previously scanned in the current window
             if qualified_repo in scanned_container_cache.keys():
@@ -215,33 +214,39 @@ def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanne
 
             print(f'Scanning {container_registry}/{container_repository} with tag "{container_tag}" ({i})')
 
-            if use_inline_scanner:
-                #TODO: Could this use a ThreadPoolExecutor...idk
+            if args.use_inline_scanner:
+                # TODO: Could this use a ThreadPoolExecutor...idk
 
-                #TODO: dedupe this code
+                # TODO: dedupe this code
                 executable_path = 'lw-scanner'
 
                 if args.path_to_inline_scanner:
                     executable_path = args.path_to_inline_scanner
-                #-----------------------
+                # -----------------------
 
-                command = f'{executable_path} image evaluate {container_registry}/{container_repository} {container_tag} --save --quiet'
+                # TODO: We could try to pull this dynamically if we have the profile ?
+                if args.inline_scanner_access_token:
+                    command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
+                    --access-token {args.inline_scanner_access_token} --account {args.account} --save --quiet"""
+                else:
+                    command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
+                    --save --quiet"""
                 logging.debug(f'Running: {command}')
                 split_command = command.split()
                 output = subprocess.run(split_command, check=False, capture_output=True, text=True)
                 if output.stderr:
-                    scan_errors.append(f"Error scanning image: {container_registry}/{container_repository}:{container_tag}")
+                    scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}')
                 else:
                     print(output.stdout)
-                #TODO: Figure out how to persist these unsupported images so we don't continue to scan?
+                # TODO: Figure out how to persist these unsupported images so we don't continue to scan?
                 # Or maybe this isn't actuallly a problem as we'll have a "bad" scan on the backend?
 
-                #TODO: Figure out how / if we can scan by image_id for things like 'latest' tag
+                # TODO: Figure out how / if we can scan by image_id for things like 'latest' tag
 
-            elif proxy_scanner_addr:
+            elif args.proxy_scanner:
                 session = requests.Session()
                 executor_tasks.append(executor.submit(
-                    initiate_proxy_scan, session, proxy_scanner_addr, container_registry, container_repository, container_tag
+                    initiate_proxy_scan, session, args.proxy_scanner, container_registry, container_repository, container_tag
                 ))
             else:
                 executor_tasks.append(executor.submit(
@@ -249,11 +254,14 @@ def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanne
                 ))
 
             i += 1
-        
+
         if scan_errors:
-            print(f"\nImages erroring out on scan listed below. The most common cause of an image scan failure is that the base image is unsupported. For a list of supported base images, see: https://docs.lacework.com/container-image-support \n")
+            print("""\nImages erroring out on scan listed below.
+            The most common cause of an image scan failure is that the base image is unsupported.
+            For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
             for error in scan_errors:
                 logging.error(error)
+
 
 def main(args):
     try:
@@ -294,19 +302,18 @@ def main(args):
         executable_path = 'lw-scanner'
 
         if args.path_to_inline_scanner:
-            logging.debug(f"Path to inline scanner: {args.path_to_inline_scanner}")
+            logging.debug(f'Path to inline scanner: {args.path_to_inline_scanner}')
             executable_path = args.path_to_inline_scanner
 
         command = f'command -v {executable_path}'
         split_command = command.split()
-        output = subprocess.run(split_command, check=False, capture_output=True, text=True)
+        output = subprocess.run(split_command, check=False, capture_output=True, text=True, shell=True)
         if output.stderr:
-            raise Exception("lw-scanner not found on host!")
-        # TODO: Add more flags to support inline scanner flags -- assumed to save to platform and not eval policy right now
+            raise Exception('lw-scanner not found on host!')
 
+        # TODO: Add more flags to support inline scanner flags -- assumed to save to platform and not eval policy right now
         active_containers = get_all_active_containers(lw_client, start_time, end_time)
 
-        print("use_inline_scanner invoked")
     else:
         # If a registry is specified, use that - otherwise, scan containers from all integrated domains
         if args.registry:
@@ -321,7 +328,7 @@ def main(args):
         list_containers(active_containers)
     else:
         # Scan all the containers
-        scan_containers(lw_client, active_containers, scanned_container_cache, args.proxy_scanner, args.use_inline_scanner)
+        scan_containers(lw_client, active_containers, scanned_container_cache, args)
 
 
 if __name__ == '__main__':
@@ -364,7 +371,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--days',
-        default=None,
+        default=os.environ.get('LOOKBACK_DAYS', 0),
         type=int,
         help='The number of days in which to search for active containers'
     )
@@ -403,14 +410,23 @@ if __name__ == '__main__':
     parser.add_argument(
         '--use-inline-scanner',
         dest='use_inline_scanner',
+        default=os.environ.get('USE_INLINE_SCANNER', None),
         action='store_true',
-        help='Use local inline scanner to evaluate images rather than Lacework platform (will attempt to scan images regardless of registry integration status)'
+        help="""Use local inline scanner to evaluate images rather than Lacework platform
+        (will attempt to scan images regardless of registry integration status)"""
     )
     parser.add_argument(
         '--path-to-inline-scanner',
         dest='path_to_inline_scanner',
         type=str,
         help='Path to the lw-scanner executable (default value is lw-scanner expected on path)'
+    )
+    parser.add_argument(
+        '--inline-scanner-access-token',
+        dest='inline_scanner_access_token',
+        default=os.environ.get('LW_ACCESS_TOKEN', None),
+        type=str,
+        help='Inline scanner authentication token'
     )
     args = parser.parse_args()
 
