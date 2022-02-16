@@ -111,6 +111,8 @@ def get_active_containers(lw_client, container_registry_domains, start_time, end
 
 def list_containers(containers):
     for container in containers:
+        if container['TAG'] == '':
+            continue
         print(f'{container["REPO"]}:{container["TAG"]}')
 
 
@@ -124,7 +126,7 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         )
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-                  f'{container_tag}". Error: {e}'
+                  f'"{container_tag}". Error: {e}'
         logging.warning(message)
 
 
@@ -156,6 +158,8 @@ def scan_containers(lw_client, containers, scanned_container_cache, proxy_scanne
 
             # Parse the container registry and repository
             container_registry, container_repository = container['REPO'].split('/', 1)
+            if container['TAG'] == '':
+                continue
             container_tag = container['TAG']
 
             if container_registry == 'docker.io':
