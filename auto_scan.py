@@ -8,6 +8,7 @@ import subprocess
 
 import requests
 
+from shellescape import quote
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -231,6 +232,7 @@ def scan_containers(lw_client, containers, scanned_container_cache, args):
                 else:
                     command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
                     --save --quiet"""
+                command = command.format(quote(command))
                 logging.debug(f'Running: {command}')
                 split_command = command.split()
                 output = subprocess.run(split_command, check=False, capture_output=True, text=True)
@@ -306,6 +308,7 @@ def main(args):
             executable_path = args.path_to_inline_scanner
 
         command = f'command -v {executable_path}'
+        command = command.format(quote(command))
         split_command = command.split()
         output = subprocess.run(split_command, check=False, capture_output=True, text=True, shell=True)
         if output.stderr:
