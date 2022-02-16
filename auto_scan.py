@@ -8,7 +8,6 @@ import subprocess
 
 import requests
 
-from shellescape import quote
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -169,6 +168,35 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         logging.warning(message)
 
 
+def execute_inline_scan(container_registry, container_repository, container_tag, args):
+    scan_errors = []
+
+    # TODO: dedupe this code
+    executable_path = args.path_to_inline_scanner if args.path_to_inline_scanner else 'lw-scanner'
+
+    # TODO: We could try to pull this dynamically if we have the profile ?
+    if args.inline_scanner_access_token:
+        command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
+        --access-token {args.inline_scanner_access_token} --account {args.account} --save --quiet"""
+    else:
+        command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
+        --save --quiet"""
+
+    logging.debug(f'Running: {command}')
+    split_command = command.split()
+    output = subprocess.run(split_command, check=False, capture_output=True, text=True)
+
+    if output.stderr:
+        scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}')
+    else:
+        print(output.stdout)
+    # TODO: Figure out how to persist these unsupported images so we don't continue to scan?
+    # Or maybe this isn't actuallly a problem as we'll have a "bad" scan on the backend?
+
+    # TODO: Figure out how / if we can scan by image_id for things like 'latest' tag
+    return scan_errors
+
+
 def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, container_repository, container_tag):
 
     try:
@@ -192,11 +220,12 @@ def scan_containers(lw_client, containers, scanned_container_cache, args):
     i = 1
 
     executor_tasks = []
+    scan_errors = []
+
     with ThreadPoolExecutor(max_workers=WORKER_THREADS) as executor:
-        scan_errors = []
         for container in containers:
+
             # Parse the container registry and repository
-            # TODO: Edge case on repos with two+ levels of nesting...
             container_registry, container_repository = container['REPO'].split('/', 1)
             if container['TAG'] == '':
                 continue
@@ -216,40 +245,14 @@ def scan_containers(lw_client, containers, scanned_container_cache, args):
             print(f'Scanning {container_registry}/{container_repository} with tag "{container_tag}" ({i})')
 
             if args.use_inline_scanner:
-                # TODO: Could this use a ThreadPoolExecutor...idk
-
-                # TODO: dedupe this code
-                executable_path = 'lw-scanner'
-
-                if args.path_to_inline_scanner:
-                    executable_path = args.path_to_inline_scanner
-                # -----------------------
-
-                # TODO: We could try to pull this dynamically if we have the profile ?
-                if args.inline_scanner_access_token:
-                    command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
-                    --access-token {args.inline_scanner_access_token} --account {args.account} --save --quiet"""
-                else:
-                    command = f"""{executable_path} image evaluate {container_registry}/{container_repository} {container_tag}
-                    --save --quiet"""
-                command = command.format(quote(command))
-                logging.debug(f'Running: {command}')
-                split_command = command.split()
-                output = subprocess.run(split_command, check=False, capture_output=True, text=True)
-                if output.stderr:
-                    scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}')
-                else:
-                    print(output.stdout)
-                # TODO: Figure out how to persist these unsupported images so we don't continue to scan?
-                # Or maybe this isn't actuallly a problem as we'll have a "bad" scan on the backend?
-
-                # TODO: Figure out how / if we can scan by image_id for things like 'latest' tag
+                scan_errors.append(execute_inline_scan(container_registry, container_repository, container_tag, args))
 
             elif args.proxy_scanner:
                 session = requests.Session()
                 executor_tasks.append(executor.submit(
                     initiate_proxy_scan, session, args.proxy_scanner, container_registry, container_repository, container_tag
                 ))
+
             else:
                 executor_tasks.append(executor.submit(
                     initiate_container_scan, lw_client, container_registry, container_repository, container_tag
@@ -257,12 +260,12 @@ def scan_containers(lw_client, containers, scanned_container_cache, args):
 
             i += 1
 
-        if scan_errors:
-            print("""\nImages erroring out on scan listed below.
-            The most common cause of an image scan failure is that the base image is unsupported.
-            For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
-            for error in scan_errors:
-                logging.error(error)
+    if scan_errors:
+        print("""\nImages erroring out on scan listed below.
+        The most common cause of an image scan failure is that the base image is unsupported.
+        For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
+        for error in scan_errors:
+            logging.error(error)
 
 
 def main(args):
@@ -301,7 +304,7 @@ def main(args):
     active_containers = []
     # inline scanner usage doesn't need to lookup registries that are configured
     if args.use_inline_scanner:
-        # Removed check for whether inline scanner is installed due to guardrail findings 
+        # Removed check for whether inline scanner is installed due to guardrail findings
 
         # TODO: Add more flags to support inline scanner flags -- assumed to save to platform and not eval policy right now
         active_containers = get_all_active_containers(lw_client, start_time, end_time)
