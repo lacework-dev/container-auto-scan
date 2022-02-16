@@ -126,7 +126,7 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         )
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-                  f'{container_tag}". Error: {e}'
+                  f'"{container_tag}". Error: {e}'
         logging.warning(message)
 
 
