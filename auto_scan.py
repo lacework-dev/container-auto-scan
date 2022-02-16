@@ -233,7 +233,7 @@ def scan_containers(lw_client, containers, scanned_container_cache, args):
                     --save --quiet"""
                 logging.debug(f'Running: {command}')
                 split_command = command.split()
-                output = subprocess.run(split_command, check=False, capture_output=True, text=True)
+                output = subprocess.run(split_command, check=False, capture_output=True, text=True, shell=True)
                 if output.stderr:
                     scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}')
                 else:
