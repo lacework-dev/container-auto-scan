@@ -282,6 +282,7 @@ def parse_account_from_lacework_client(lw_client):
     return lw_client._account
 
 def main(args):
+
     try:
         lw_client = LaceworkClient(
             account=args.account,
@@ -408,17 +409,6 @@ if __name__ == '__main__':
         help='Only list active containers for integrated/specified registries (no scans)'
     )
     parser.add_argument(
-        '-d', '--daemon',
-        action='store_true',
-        help='Run the scanner as a daemon (executes every 20 minutes)'
-    )
-    parser.add_argument(
-        '--debug',
-        action='store_true',
-        default=os.environ.get('LW_DEBUG', False),
-        help='Enable debug logging'
-    )
-    parser.add_argument(
         '--use-inline-scanner',
         dest='use_inline_scanner',
         default=os.environ.get('USE_INLINE_SCANNER', None),
@@ -443,12 +433,18 @@ if __name__ == '__main__':
         '--inline-scanner-exclusive',
         dest='inline_scanner_exclusive',
         action='store_true',
-<<<<<<< Updated upstream
         help='Use inline scanner exculsively. (default augments platform scans with inline scanner for unconfigured registries)'
-=======
-        help="""Set to use inline scanner exclusively.
-        (Default will submit platform scans for integrated registries)"""
->>>>>>> Stashed changes
+    )
+    parser.add_argument(
+        '-d', '--daemon',
+        action='store_true',
+        help='Run the scanner as a daemon (executes every 20 minutes)'
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=os.environ.get('LW_DEBUG', False),
+        help='Enable debug logging'
     )
     args = parser.parse_args()
 
