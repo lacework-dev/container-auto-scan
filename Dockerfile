@@ -17,13 +17,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && wget https://github.com/lacework/lacework-vulnerability-scanner/releases/download/v${LW_SCANNER_VERSION}/lw-scanner-linux-amd64 \
     && mv lw-scanner-linux-amd64 /usr/local/bin/lw-scanner \
-    && chmod +x /usr/local/bin/lw-scanner
+    && chmod +x /usr/local/bin/lw-scanner \
+    && apt-get purge curl gnupg lsb-release wget -y
 
-#RUN groupadd --gid 5000 user \
-#    && useradd --home-dir /home/user --create-home --uid 5000 --gid 5000 --shell /bin/sh --skel /dev/null user \
-#    && usermod -aG docker user 
+RUN groupadd --gid 5000 user \
+    && useradd --home-dir /home/user --create-home --uid 5000 --gid 5000 --shell /bin/sh --skel /dev/null user \
+    && usermod -aG docker user \
+    && touch /var/run/docker.sock \
+    && chown root:docker /var/run/docker.sock
 
-#USER user
+USER user
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
