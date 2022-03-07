@@ -168,7 +168,7 @@ def initiate_container_scan(lw_client, container_registry, container_repository,
         logging.warning(message)
 
 
-def execute_inline_scan(container_registry, container_repository, container_tag, args):
+def execute_inline_scan(container_registry, container_repository, container_tag,  args, all_images=False):
     scan_errors = []
 
     # TODO: dedupe this code
@@ -263,6 +263,10 @@ def scan_containers(lw_client, integrated_registry_containers, all_active_contai
                     executor_tasks.append(executor.submit(
                         initiate_container_scan, lw_client, container_registry, container_repository, container_tag
                     ))
+
+                # inline scanner augmentation (default behavior) 
+                if args.use_inline_scanner and not args.inline_scanner_exclusive:
+                    scan_errors.append(execute_inline_scan(container_registry, container_repository, container_tag, args, all_images=False))
 
             i += 1
 
@@ -439,7 +443,12 @@ if __name__ == '__main__':
         '--inline-scanner-exclusive',
         dest='inline_scanner_exclusive',
         action='store_true',
+<<<<<<< Updated upstream
         help='Use inline scanner exculsively. (default augments platform scans with inline scanner for unconfigured registries)'
+=======
+        help="""Set to use inline scanner exclusively.
+        (Default will submit platform scans for integrated registries)"""
+>>>>>>> Stashed changes
     )
     args = parser.parse_args()
 
