@@ -185,7 +185,12 @@ def execute_inline_scan(container_registry, container_repository, container_tag,
     output = subprocess.run(split_command, check=False, capture_output=True, text=True)
 
     if output.stderr:
-        scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}')
+        error_msg = ""
+        if "ERROR" in output.stderr:
+            error_msg = output.stderr[output.stderr.index('ERROR'):]
+
+        scan_errors.append(f'Error scanning image: {container_registry}/{container_repository}:{container_tag}, Message: {error_msg}')
+
         logging.debug(f'Stderr: {output.stderr}')
         logging.debug(f'Stdout: {output.stdout}')
     else:
@@ -263,10 +268,6 @@ def scan_containers(lw_client, integrated_registry_containers, all_active_contai
                     executor_tasks.append(executor.submit(
                         initiate_container_scan, lw_client, container_registry, container_repository, container_tag
                     ))
-
-                # inline scanner augmentation (default behavior) 
-                if args.use_inline_scanner and not args.inline_scanner_exclusive:
-                    scan_errors.append(execute_inline_scan(container_registry, container_repository, container_tag, args, all_images=False))
 
             i += 1
 
