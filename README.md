@@ -47,7 +47,7 @@ Due to permissions and dependency requirements for Docker-in-Docker, a new conta
 In order to run the Docker-in-Docker container, you'll execute the following:
 
 ```bash
-docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
+docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
 ```
 
 #### Things to Note
