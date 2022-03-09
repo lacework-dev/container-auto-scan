@@ -31,7 +31,7 @@ The script can also read the standard Lacework CLI environment variables for aut
 If cloning this repository, rather than using a container, you can run the script with the following usage:
 
 ```bash
-usage: ./auto-scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [-d] [--debug]
+usage: ./auto-scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [--inline-scanner] [--inline-scanner-path INLINE_SCANNER_PATH] [--inline-scanner-access-token INLINE_SCANNER_ACCESS_TOKEN] [--inline-scanner-only] [-d] [--debug]
 ```
 
 ### Kubernetes Manifest
@@ -40,22 +40,26 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 
 ## Arguments
 
-| short | long              | default | help                                                                        |
-| :---- | :---------------- | :------ | :-------------------------------------------------------------------------- |
-| `-h`  | `--help`          |         | show this help message and exit                                             |
-|       | `--account`       | `None`  | The Lacework account to use                                                 |
-|       | `--subaccount`    | `None`  | The Lacework sub-account to use                                             |
-|       | `--api-key`       | `None`  | The Lacework API key to use                                                 |
-|       | `--api-secret`    | `None`  | The Lacework API secret to use                                              |
-| `-p`  | `--profile`       | `None`  | The Lacework CLI profile to use                                             |
-|       | `--proxy-scanner` | `None`  | The address of a Lacework proxy scanner: http(s)://[address]:[port]         |
-|       | `--days`          | `None`  | The number of days in which to search for active containers                 |
-|       | `--hours`         | `0`     | The number of hours in which to search for active containers                |
-|       | `--registry`      | `None`  | The container registry domain(s) for which to issue scans (comma separated) |
-|       | `--rescan`        |         | Issue scan requests for previously scanned containers                       |
-|       | `--list-only`     |         | Only list active containers for integrated/specified registries (no scans)  |
-| `-d`  | `--daemon`        |         | Run the scanner as a daemon (executes every 20 minutes)                     |
-|       | `--debug`         |         | Enable debug logging                                                        |
+| short | long                            | default | help                                                                                                                                              |
+| :---- | :------------------------------ | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-h`  | `--help`                        |         | show this help message and exit                                                                                                                   |
+|       | `--account`                     | `None`  | The Lacework account to use                                                                                                                       |
+|       | `--subaccount`                  | `None`  | The Lacework sub-account to use                                                                                                                   |
+|       | `--api-key`                     | `None`  | The Lacework API key to use                                                                                                                       |
+|       | `--api-secret`                  | `None`  | The Lacework API secret to use                                                                                                                    |
+| `-p`  | `--profile`                     | `None`  | The Lacework CLI profile to use                                                                                                                   |
+|       | `--proxy-scanner`               | `None`  | The address of a Lacework proxy scanner: http(s)://[address]:[port]                                                                               |
+|       | `--days`                        | `None`  | The number of days in which to search for active containers                                                                                       |
+|       | `--hours`                       | `0`     | The number of hours in which to search for active containers                                                                                      |
+|       | `--registry`                    | `None`  | The container registry domain(s) for which to issue scans (comma separated)                                                                       |
+|       | `--rescan`                      |         | Issue scan requests for previously scanned containers                                                                                             |
+|       | `--list-only`                   |         | Only list active containers for integrated/specified registries (no scans)                                                                        |
+|       | `--inline-scanner`              | `None`  | Use local inline scanner to evaluate images rather than Lacework platform (will attempt to scan images regardless of registry integration status) |
+|       | `--inline-scanner-path`         | `None`  | Path to the lw-scanner executable (default value is lw-scanner expected on path)                                                                  |
+|       | `--inline-scanner-access-token` | `None`  | Inline scanner authentication token                                                                                                               |
+|       | `--inline-scanner-only`         |         | Use inline scanner exculsively. (default uses platform scans with inline scanner for unconfigured registries)                                     |
+| `-d`  | `--daemon`                      |         | Run the scanner as a daemon (executes every 20 minutes)                                                                                           |
+|       | `--debug`                       |         | Enable debug logging                                                                                                                              |
 
 ## Environment Variables
 
