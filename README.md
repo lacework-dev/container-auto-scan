@@ -34,6 +34,32 @@ If cloning this repository, rather than using a container, you can run the scrip
 usage: ./auto-scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [--inline-scanner] [--inline-scanner-path INLINE_SCANNER_PATH] [--inline-scanner-access-token INLINE_SCANNER_ACCESS_TOKEN] [--inline-scanner-only] [-d] [--debug]
 ```
 
+### Inline Scanner Backed Scans
+
+As of version `0.3` of this script, scans now support the use of the Lacework Inline Scanner for container assessments. The use case for this is to scan containers which do _not_ have an integrated container registry in your Lacework account. This will also allow scanning of publicly accessible images, as the Inline Scanner will pull them through the local Docker daemon.
+
+The new Inline Scanner functionality can be leveraged either by running the `auto_scan.py` script with the `--inline-scanner` flag on a machine with the Inline Scanner installed, or it can be run with a new Docker-in-Docker enabled container.
+
+When executing in this mode, the script will attempt to scan as many container repositories as possible with the Platform scanner, and fall back to the Inline scanner only when required. This behavior can be augmented with the `--inline-scanner-only` flag.
+
+Due to permissions and dependency requirements for Docker-in-Docker, a new container image has been created `container-auto-scan-inline` which runs as the `root` user, and installs the necessary components. This also means that the image is much larger than the `container-auto-scan` image. Both images will follow the same release cycle and tagging conventions.
+
+In order to run the Docker-in-Docker container, you'll execute the following:
+
+```bash
+docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
+```
+
+#### Things to Note
+
+- The Inline Scanner repository is named `container-auto-scan-inline` instead of `contianer-auto-scan`
+- The container runs as `root` rather than `user`
+  - As a result, the `lacework.toml` file is mounted in `/root/` rather than `/home/user/`
+- An Inline Scanner access token must be provided in one of two ways:
+  - The `--inline-scanner-access-token` argument
+  - The `LW_ACCESS_TOKEN` environment variable
+- The Inline Scanner is currently limited to [60 scans per hour.](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas)
+
 ### Kubernetes Manifest
 
 If you wish to run this script continuously, there is an example Kubernetes manifest in the [manifests](manifests/) directory which will store your Lacework API credentials as a Kubernetes Secret and then run the container in a Deployment with the `-d` flag to execute it as a daemon.
