@@ -54,7 +54,7 @@ def build_container_query(registry=None):
 
     query_text = 'ContainersByRegistry { source { LW_HE_CONTAINERS }'
     if registry is not None:
-        query_text += f' filter {{ starts_with(REPO, "{registry}") }}'
+        query_text += f" filter {{ starts_with(REPO, '{registry}') }}"
     query_text += ' return distinct {REPO, TAG} }'
 
     logging.debug(f'LQL Query is: {query_text}')
