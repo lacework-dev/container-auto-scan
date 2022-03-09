@@ -314,7 +314,7 @@ def scan_containers(lw_client, container_scan_queue, container_registry_domains,
             result = task.result()
             if result:
                 for error in result:
-                    scan_errors.append(result)
+                    scan_errors.append(error)
 
     if scan_errors:
         print("""\nImages erroring out on scan listed below.
