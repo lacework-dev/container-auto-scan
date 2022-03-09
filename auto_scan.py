@@ -52,10 +52,10 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
 
 def build_container_query(registry=None):
 
-    query_text = f'ContainersByRegistry {{ source {{ LW_HE_CONTAINERS }}'
+    query_text = 'ContainersByRegistry { source { LW_HE_CONTAINERS }'
     if registry is not None:
-        query_text += f' filter {{ starts_with(REPO, \'{registry}\') }}'
-    query_text += f' return distinct {{REPO, TAG}} }}'
+        query_text += f' filter {{ starts_with(REPO, "{registry}") }}'
+    query_text += ' return distinct {REPO, TAG} }'
 
     logging.debug(f'LQL Query is: {query_text}')
 
@@ -110,7 +110,7 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
 
             active_containers += response_containers
     else:
-        print(f'Fetching all active containers...')
+        print('Fetching all active containers...')
 
         response = lw_client.queries.execute(
             query_text=build_container_query(),
@@ -220,7 +220,7 @@ def initiate_platform_scan(lw_client, container_registry, container_repository, 
         )
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-                  f'\'{container_tag}\'. Error: {e}'
+                  f'"{container_tag}". Error: {e}'
         logging.warning(message)
 
 
@@ -237,7 +237,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, container_registry, contain
         response.raise_for_status()
     except Exception as e:
         message = f'Failed to scan container {container_registry}/{container_repository} with tag ' \
-                  f'\'{container_tag}\'. Error: {e}'
+                  f'"{container_tag}". Error: {e}'
         logging.warning(message)
 
 
@@ -317,9 +317,9 @@ def scan_containers(lw_client, container_scan_queue, container_registry_domains,
                     scan_errors.append(result)
 
     if scan_errors:
-        print('''\nImages erroring out on scan listed below.
+        print("""\nImages erroring out on scan listed below.
         The most common cause of an image scan failure is that the base image is unsupported.
-        For a list of supported base images, see: https://docs.lacework.com/container-image-support \n''')
+        For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
         for error in scan_errors:
             logging.error(error)
 
@@ -453,8 +453,8 @@ if __name__ == '__main__':
         '--inline-scanner',
         default=os.environ.get('USE_INLINE_SCANNER', None),
         action='store_true',
-        help='''Use local inline scanner to evaluate images rather than Lacework platform
-        (will attempt to scan images regardless of registry integration status)'''
+        help="""Use local inline scanner to evaluate images rather than Lacework platform
+        (will attempt to scan images regardless of registry integration status)"""
     )
     parser.add_argument(
         '--inline-scanner-path',
