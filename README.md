@@ -11,6 +11,7 @@ The aim of this project is to make it simple to trigger vulnerability assessment
 2. The script will enumerate all integrated container registries, gathering the domains that can be scanned. This can be overwritten with the `--registry <registry_domain>` argument.
 3. The script will run a query against the specified Lacework account to gather distinct container repository/tag combinations that have run in the environment over the "look-back" period for the integrated domains.
 4. The script will then issue container scan requests for the un-scanned active containers via the Lacework API.
+5. If using the Inline Scanner option, the script will try to scan active containers without container registry integrations using the Inline Scanner.
 
 The default "look-back" period is 1 day, but can be augmented with the `--days <num_of_days>` or `--hours <num_of_hours>` arguments.
 
@@ -34,31 +35,31 @@ If cloning this repository, rather than using a container, you can run the scrip
 usage: ./auto-scan.py [-h] [--account ACCOUNT] [--subaccount SUBACCOUNT] [--api-key API_KEY] [--api-secret API_SECRET] [-p PROFILE] [--proxy-scanner PROXY_SCANNER] [--days DAYS] [--hours HOURS] [--registry REGISTRY] [--rescan] [--list-only] [--inline-scanner] [--inline-scanner-path INLINE_SCANNER_PATH] [--inline-scanner-access-token INLINE_SCANNER_ACCESS_TOKEN] [--inline-scanner-only] [-d] [--debug]
 ```
 
-### Inline Scanner Backed Scans
+### Inline Scanner Based Scans
 
-As of version `0.3` of this script, scans now support the use of the Lacework Inline Scanner for container assessments. The use case for this is to scan containers which do _not_ have an integrated container registry in your Lacework account. This will also allow scanning of publicly accessible images, as the Inline Scanner will pull them through the local Docker daemon.
+As of version `0.3` of this script, scans now support the use of the Lacework Inline Scanner for container assessments. The use case for this is to scan containers which do _not_ have an integrated container registry in a Lacework account. This will also allow scanning of publicly accessible images, as the Inline Scanner will pull them through the local Docker daemon.
 
-The new Inline Scanner functionality can be leveraged either by running the `auto_scan.py` script with the `--inline-scanner` flag on a machine with the Inline Scanner installed, or it can be run with a new Docker-in-Docker enabled container.
+The new Inline Scanner functionality can be leveraged either by running the `auto_scan.py` script with the `--inline-scanner` argument on a machine with the Inline Scanner installed, or it can be run with a new Docker-in-Docker enabled container.
 
-When executing in this mode, the script will attempt to scan as many container repositories as possible with the Platform scanner, and fall back to the Inline scanner only when required. This behavior can be augmented with the `--inline-scanner-only` flag.
+When executing in this mode, the script will attempt to scan as many container repositories as possible with the Platform scanner, and fall back to the Inline scanner only when required. This behavior can be augmented with the `--inline-scanner-only` argument which will force all scans through the Inline Scanner.
 
-Due to permissions and dependency requirements for Docker-in-Docker, a new container image has been created `container-auto-scan-inline` which runs as the `root` user, and installs the necessary components. This also means that the image is much larger than the `container-auto-scan` image. Both images will follow the same release cycle and tagging conventions.
+Due to permissions and dependency requirements for Docker-in-Docker, a new container image has been created (`container-auto-scan-inline`) which runs as the `root` user, and installs the necessary components. This also means that the image is much larger than the `container-auto-scan` image. Both images will follow the same release cycle and tagging conventions.
 
 In order to run the Docker-in-Docker container, you'll execute the following:
 
 ```bash
-docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
+docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
 ```
 
 #### Things to Note
 
-- The Inline Scanner repository is named `container-auto-scan-inline` instead of `contianer-auto-scan`
-- The container runs as `root` rather than `user`
+- The Inline Scanner based container repository is named `container-auto-scan-inline` instead of `contianer-auto-scan`
+- The Inline Scanner based container runs as `root` rather than `user`
   - As a result, the `lacework.toml` file is mounted in `/root/` rather than `/home/user/`
-- An Inline Scanner access token must be provided in one of two ways:
+- The Inline Scanner based scans require an access token be provided in one of two ways:
   - The `--inline-scanner-access-token` argument
-  - The `LW_ACCESS_TOKEN` environment variable
-- The Inline Scanner is currently limited to [60 scans per hour.](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas)
+  - The `LW_ACCESS_TOKEN` environment variable while setting the `--inline-scanner` argument
+- The Inline Scanner is currently limited to [60 scans per hour](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas).
 
 ### Kubernetes Manifest
 
@@ -80,10 +81,10 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 |       | `--registry`                    | `None`  | The container registry domain(s) for which to issue scans (comma separated)                                                                       |
 |       | `--rescan`                      |         | Issue scan requests for previously scanned containers                                                                                             |
 |       | `--list-only`                   |         | Only list active containers for integrated/specified registries (no scans)                                                                        |
-|       | `--inline-scanner`              | `None`  | Use local inline scanner to evaluate images rather than Lacework platform (will attempt to scan images regardless of registry integration status) |
-|       | `--inline-scanner-path`         | `None`  | Path to the lw-scanner executable (default value is lw-scanner expected on path)                                                                  |
-|       | `--inline-scanner-access-token` | `None`  | Inline scanner authentication token                                                                                                               |
-|       | `--inline-scanner-only`         |         | Use inline scanner exculsively. (default uses platform scans with inline scanner for unconfigured registries)                                     |
+|       | `--inline-scanner`              | `None`  | Use local Inline Scanner to evaluate images rather than Lacework platform (will attempt to scan images regardless of registry integration status) |
+|       | `--inline-scanner-path`         | `None`  | Path to the Inline Scanner executable (default: lw-scanner expected on path)                                                                      |
+|       | `--inline-scanner-access-token` | `None`  | Inline Scanner authentication token                                                                                                               |
+|       | `--inline-scanner-only`         |         | Use Inline Scanner exculsively (default: use platform scans with inline scanner for unconfigured registries)                                      |
 | `-d`  | `--daemon`                      |         | Run the scanner as a daemon (executes every 20 minutes)                                                                                           |
 |       | `--debug`                       |         | Enable debug logging                                                                                                                              |
 
