@@ -14,7 +14,8 @@ from datetime import datetime, timedelta, timezone
 
 from laceworksdk import LaceworkClient
 
-FAILED_SCAN_CACHE = 'failed_scan_cache.json'
+SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
+FAILED_SCAN_CACHE = f'{SCAN_CACHE_DIR}/failed_scan_cache.json'
 FAILED_SCAN_CACHE_REASONS = [
     'ERROR: Unsupported base image OS.',
     'ERROR: Error while scanning image: Docker daemon is not running locally.'
@@ -150,6 +151,9 @@ def initiate_inline_scan(container_registry, container_repository, container_tag
     # Otherwise we assume that the LW_ACCOUNT_NAME env var is set
     if account_name:
         command += f' --account-name {account_name}'
+
+    # Set the cache directory to local
+    command += f' --data-directory {SCAN_CACHE_DIR}'
 
     # Assume we want to save the results to Lacework - that's why we're doing this, right?
     command += ' --save'
