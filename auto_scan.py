@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
 from laceworksdk import LaceworkClient
+from tabulate import tabulate
 
 SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
 FAILED_SCAN_CACHE = f'{SCAN_CACHE_DIR}/failed_scan_cache.json'
@@ -165,8 +166,7 @@ def initiate_inline_scan(container_registry, container_repository, container_tag
     if output.stderr:
         err = output.stderr.split('\n\n')[-1:][0].rstrip()
         err_message = {
-            'container_registry': container_registry,
-            'container_repository': container_repository,
+            'container_repository': f'{container_registry}/{container_repository}',
             'container_tag': container_tag,
             'error_message': err
         }
@@ -337,8 +337,8 @@ def scan_containers(lw_client, container_scan_queue, container_registry_domains,
         print("""\nImages erroring out on scan listed below.
         The most common cause of an image scan failure is that the base image is unsupported.
         For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
-        for error in scan_errors:
-            logging.error(error)
+
+        print(tabulate(scan_errors, headers="keys"))
 
 
 def main(args):
