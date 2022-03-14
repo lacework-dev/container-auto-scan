@@ -338,7 +338,7 @@ def scan_containers(lw_client, container_scan_queue, container_registry_domains,
         The most common cause of an image scan failure is that the base image is unsupported.
         For a list of supported base images, see: https://docs.lacework.com/container-image-support \n""")
 
-        print(tabulate(scan_errors, headers="keys"))
+        print(tabulate(scan_errors, headers='keys'))
 
 
 def main(args):
