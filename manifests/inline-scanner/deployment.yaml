@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lacework-api
+type: Opaque
+data:
+  api-key: <BASE64_ENCODED_API_KEY>
+  api-secret: <BASE64_ENCODED_API_SECRET>
+  access-token: <BASE64_ENCODED_ACCESS_TOKEN>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lacework-auto-scan
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: lacework-auto-scan
+  template:
+    metadata:
+      labels:
+        app: lacework-auto-scan
+    spec:
+      containers:
+      - image: alannix/container-auto-scan-inline:latest
+        name: lacework-auto-scan
+        args: ["-d", "--inline-scanner"]
+        env:
+        - name: LW_ACCOUNT
+          value: "lacework"
+        - name: LW_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: lacework-api
+              key: api-key
+        - name: LW_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: lacework-api
+              key: api-secret
+        - name: LW_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: lacework-api
+              key: access-token
