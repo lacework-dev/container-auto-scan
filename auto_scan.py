@@ -370,10 +370,12 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
 
             i += 1
 
+        j = 0
         for task in as_completed(executor_tasks):
             result = task.result()
             if result:
-                print(f'Finished scanning {result["repository"]}:{result["tag"]}')
+                j += 1
+                print(f'Finished scanning {result["repository"]}:{result["tag"]}. Result {j} of {i}')
                 if result['error'] is not None:
                     scan_errors.append(result)
 
