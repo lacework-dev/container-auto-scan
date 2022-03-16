@@ -53,7 +53,7 @@ docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var
 
 #### Things to Note
 
-- The Inline Scanner based container repository is named `container-auto-scan-inline` instead of `contianer-auto-scan`
+- The Inline Scanner based container repository is named `container-auto-scan-inline` instead of `container-auto-scan`
 - The Inline Scanner based container runs as `root` rather than `user`
   - As a result, the `lacework.toml` file is mounted in `/root/` rather than `/home/user/`
 - The Inline Scanner based scans require an access token be provided in one of two ways:

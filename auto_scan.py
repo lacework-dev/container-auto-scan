@@ -352,13 +352,14 @@ def create_scan_task(executor, executor_tasks, lw_client,
 def scan_containers(lw_client, container_scan_queue, registry_domains, args):
     print(f'Containers to Scan: {len(container_scan_queue)}')
 
-    i = 1
+    i = 0
 
     executor_tasks = []
     scan_errors = []
 
     with ThreadPoolExecutor(max_workers=WORKER_THREADS) as executor:
         for container in container_scan_queue:
+            i += 1
 
             registry, repository, tag = parse_container_attributes(container)
 
@@ -368,12 +369,12 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
             create_scan_task(executor, executor_tasks, lw_client, registry, repository, tag,
                              registry_domains, args, i)
 
-            i += 1
-
+        j = 0
         for task in as_completed(executor_tasks):
             result = task.result()
             if result:
-                print(f'Finished scanning {result["repository"]}:{result["tag"]}')
+                j += 1
+                print(f'Finished scanning {result["repository"]}:{result["tag"]}. Result {j} of {i}')
                 if result['error'] is not None:
                     scan_errors.append(result)
 
