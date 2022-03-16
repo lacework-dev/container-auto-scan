@@ -14,7 +14,7 @@ venv/
 .cache/
 .pytest_cache/
 example.py
-failed_scan_cache.json
+cache/**/*
 
 # Byte-compiled / optimized files
 *.py[cod]
