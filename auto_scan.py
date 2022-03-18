@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
 from laceworksdk import LaceworkClient
+from laceworksdk.exceptions import ApiError, RateLimitError
 from tabulate import tabulate
 
 SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
@@ -240,6 +241,17 @@ def initiate_platform_scan(lw_client, registry, repository, tag):
             repository,
             tag
         )
+    except RateLimitError as e:
+        error_message = f'Received rate limit response from Lacework. Exiting to prevent ' \
+                        f'exasperating the issue. Error: {e}'
+        logger.warning(error_message)
+        os._exit(1)
+    except ApiError as e:
+        error_message = f'Failed to scan container {qualified_repo} with tag ' \
+                        f'"{tag}". Error: {e}'
+        logger.warning(error_message)
+        if 400 <= e.status_code < 500:
+            save_failed_scan(qualified_repo, tag, error_message)
     except Exception as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
