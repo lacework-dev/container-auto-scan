@@ -70,7 +70,7 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
 
 def build_container_query(registry=None):
 
-    query_text = 'ContainersByRegistry { source { LW_HE_CONTAINERS }'
+    query_text = '{ source { LW_HE_CONTAINERS }'
     if registry is not None:
         if registry == 'index.docker.io':
             registry = 'docker.io'
