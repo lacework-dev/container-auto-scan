@@ -40,20 +40,30 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
         end_time=end_time
     )
 
-    num_returned = len(scanned_containers.get('data', {}))
-    if num_returned == PAGINATION_MAX:
-        logging.warning(f'Warning! The maximum number of container assessments ({PAGINATION_MAX}) was returned.')
-    print(f'Previously Assessed Container Count: {num_returned}')
-
     logger.info('Building container assessment cache...')
 
+    returned_containers = 0
     scanned_container_cache = {}
 
-    for scanned_container in scanned_containers.get('data', {}):
-        if scanned_container['IMAGE_REPO'] not in scanned_container_cache.keys():
-            scanned_container_cache[scanned_container['IMAGE_REPO']] = scanned_container['IMAGE_TAGS']
+    for scanned_container in scanned_containers.get('data', []):
+
+        registry = scanned_container['IMAGE_REGISTRY']
+        repository = scanned_container['IMAGE_REPO']
+        tags = scanned_container['IMAGE_TAGS']
+
+        qualified_repo = f'{registry}/{repository}'
+
+        if qualified_repo not in scanned_container_cache.keys():
+            scanned_container_cache[qualified_repo] = tags
+            returned_containers += len(tags)
         else:
-            scanned_container_cache[scanned_container['IMAGE_REPO']] += scanned_container['IMAGE_TAGS']
+            for tag in tags:
+                if tag not in scanned_container_cache[qualified_repo]:
+                    scanned_container_cache[qualified_repo].append(tag)
+                    returned_containers += 1
+
+    logger.info(f'Previously Assessed Container Count: {returned_containers}')
+    logger.debug(json.dumps(scanned_container_cache, indent=4))
 
     return scanned_container_cache
 
