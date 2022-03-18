@@ -162,7 +162,7 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
     return active_containers
 
 
-def load_failed_inline_scans():
+def load_failed_scans():
     # If we have a stored scan cache, then use it
     # Otherwise create an empty one
     if os.path.isfile(FAILED_SCAN_CACHE):
@@ -173,8 +173,8 @@ def load_failed_inline_scans():
         return {}
 
 
-def save_failed_inline_scan(qualified_repo, tag, reason):
-    failed_scan_cache = load_failed_inline_scans()
+def save_failed_scan(qualified_repo, tag, reason):
+    failed_scan_cache = load_failed_scans()
 
     if qualified_repo not in failed_scan_cache.keys():
         failed_scan_cache[qualified_repo] = {tag: reason}
@@ -223,7 +223,7 @@ def initiate_inline_scan(registry, repository, tag, args,
         # Cache failure results for specific messages
         for error_substr in FAILED_SCAN_CACHE_REASONS:
             if error_substr in error_message:
-                save_failed_inline_scan(qualified_repo, tag, error_message)
+                save_failed_scan(qualified_repo, tag, error_message)
 
     logger.debug(output.stdout)
 
@@ -306,7 +306,7 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
     deduped_container_scan_queue = []
 
     # Load previously scanned containers
-    failed_scan_cache = load_failed_inline_scans()
+    failed_scan_cache = load_failed_scans()
     scanned_container_cache = build_container_assessment_cache(lw_client, start_time, end_time)
 
     skipped_containers = 0
@@ -324,14 +324,12 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
                 skipped_containers += 1
                 continue
 
-        # Skip if the container has a previously failed inline scan
-        if (args.inline_scanner or args.inline_scanner_access_token) and \
-           (args.inline_scanner_only or registry not in registry_domains):
-            if qualified_repo in failed_scan_cache.keys():
-                if tag in failed_scan_cache[qualified_repo].keys():
-                    print(f'Skipping previously failed {qualified_repo} with tag "{tag}"')
-                    skipped_containers += 1
-                    continue
+        # Skip if the container has a previously failed scan
+        if qualified_repo in failed_scan_cache.keys():
+            if tag in failed_scan_cache[qualified_repo].keys():
+                logger.info(f'Skipping previously failed {qualified_repo} with tag "{tag}"')
+                skipped_containers += 1
+                continue
 
         deduped_container_scan_queue.append(container)
 
