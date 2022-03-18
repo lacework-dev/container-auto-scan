@@ -85,6 +85,7 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 |       | `--inline-scanner-path`         | `None`  | Path to the Inline Scanner executable (default: lw-scanner expected on path)                                                                                                     |
 |       | `--inline-scanner-access-token` | `None`  | Inline Scanner authentication token (in production environments it is recommended to use the `--inline-scanner` argument paried with the `LW_ACCESS_TOKEN` environment variable) |
 |       | `--inline-scanner-only`         |         | Use Inline Scanner exculsively (default: use platform scans with inline scanner for unconfigured registries)                                                                     |
+|       | `--org-level`                   |         | Iterate through each Account in an Organization                                                                                                                                  |
 | `-d`  | `--daemon`                      |         | Run the scanner as a daemon (executes every 20 minutes)                                                                                                                          |
 |       | `--debug`                       |         | Enable debug logging                                                                                                                                                             |
 
