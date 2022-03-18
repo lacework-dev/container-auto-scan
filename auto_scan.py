@@ -385,24 +385,24 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
 
     with ThreadPoolExecutor(max_workers=WORKER_THREADS) as executor:
         for container in container_scan_queue:
-            i += 1
 
             registry, repository, tag = parse_container_attributes(container)
-
             if tag == '':
                 error_message = f'Skipping {registry}/{repository} as the tag was empty.'
                 logger.info(error_message)
                 save_failed_scan(f'{registry}/{repository}', tag, error_message)
                 continue
 
+            i += 1
+
             create_scan_task(executor, executor_tasks, lw_client, registry, repository, tag,
                              registry_domains, args, i)
 
         j = 0
         for task in as_completed(executor_tasks):
+            j += 1
             result = task.result()
             if result:
-                j += 1
                 logger.info(f'Finished scanning {result["repository"]}:{result["tag"]}. ({j} of {i})')
                 if result['error'] is not None:
                     scan_errors.append(result)
