@@ -25,9 +25,15 @@ INTERVAL = 1200
 PAGINATION_MAX = 5000
 WORKER_THREADS = 10
 
+logging.basicConfig(
+    format='%(asctime)s %(name)s [%(levelname)s] %(message)s'
+)
+logger = logging.getLogger('auto-scan')
+logger.setLevel(os.getenv('LOG_LEVEL', logging.INFO))
+
 
 def build_container_assessment_cache(lw_client, start_time, end_time):
-    print(f'Fetching container assessments since "{start_time}"...')
+    logger.info(f'Fetching container assessments since "{start_time}"...')
 
     scanned_containers = lw_client.vulnerabilities.get_container_assessments_by_date(
         start_time=start_time,
@@ -39,7 +45,7 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
         logging.warning(f'Warning! The maximum number of container assessments ({PAGINATION_MAX}) was returned.')
     print(f'Previously Assessed Container Count: {num_returned}')
 
-    print('Building container assessment cache...')
+    logger.info('Building container assessment cache...')
 
     scanned_container_cache = {}
 
@@ -61,7 +67,7 @@ def build_container_query(registry=None):
         query_text += f" filter {{ starts_with(REPO, '{registry}') }}"
     query_text += ' return distinct {REPO, TAG} }'
 
-    logging.debug(f'LQL Query is: {query_text}')
+    logger.debug(f'LQL Query: {query_text}')
 
     return query_text
 
@@ -79,7 +85,7 @@ def build_scan_result(scanner_type, repository, tag, error=None):
 
 
 def get_container_registry_domains(lw_client):
-    print('Fetching container registry domains...')
+    logger.info('Fetching container registry domains...')
 
     registries = lw_client.container_registries.get()
 
@@ -91,7 +97,7 @@ def get_container_registry_domains(lw_client):
             if registry_domain not in registry_domains:
                 registry_domains.append(registry_domain)
 
-    print(f'Returned Container Domains: {registry_domains}')
+    logger.info(f'Returned Container Domains: {registry_domains}')
 
     return registry_domains
 
@@ -104,7 +110,7 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
 
         # Query for active containers for integrated registries
         for registry_domain in registry_domains:
-            print(f'Fetching active containers for {registry_domain}...')
+            logger.info(f'Fetching active containers for {registry_domain}...')
 
             response = lw_client.queries.execute(
                 query_text=build_container_query(registry_domain),
@@ -118,12 +124,12 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
 
             num_returned = len(response_containers)
             if num_returned == PAGINATION_MAX:
-                logging.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
-            print(f'Found {num_returned} active containers for {registry_domain}...')
+                logger.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
+            logger.info(f'Found {num_returned} active containers for {registry_domain}...')
 
             active_containers += response_containers
     else:
-        print('Fetching all active containers...')
+        logger.info('Fetching all active containers...')
 
         response = lw_client.queries.execute(
             query_text=build_container_query(),
@@ -137,8 +143,8 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
 
         num_returned = len(response_containers)
         if num_returned == PAGINATION_MAX:
-            logging.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
-        print(f'Found {num_returned} active containers...')
+            logger.warning(f'Warning! The maximum number of active containers ({PAGINATION_MAX}) was returned.')
+        logger.info(f'Found {num_returned} active containers...')
 
         active_containers += response_containers
 
@@ -196,7 +202,7 @@ def initiate_inline_scan(registry, repository, tag, args,
     # Assume we want to save the results to Lacework - that's why we're doing this, right?
     command += ' --save'
 
-    logging.debug(f'Running: {command}')
+    logger.debug(f'Running: {command}')
     split_command = command.split()
     output = subprocess.run(split_command, check=False, capture_output=True, text=True)
 
@@ -208,7 +214,7 @@ def initiate_inline_scan(registry, repository, tag, args,
             if error_substr in error_message:
                 save_failed_inline_scan(qualified_repo, tag, error_message)
 
-    logging.debug(output.stdout)
+    logger.debug(output.stdout)
 
     return build_scan_result('Inline', qualified_repo, tag, error_message)
 
@@ -227,7 +233,7 @@ def initiate_platform_scan(lw_client, registry, repository, tag):
     except Exception as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
-        logging.warning(error_message)
+        logger.warning(error_message)
 
     return build_scan_result('Platform', qualified_repo, tag, error_message)
 
@@ -249,7 +255,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, tag):
     except Exception as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
-        logging.warning(error_message)
+        logger.warning(error_message)
 
     return build_scan_result('Proxy', qualified_repo, tag, error_message)
 
@@ -258,7 +264,7 @@ def list_containers(containers):
     for container in containers:
         if container['TAG'] == '':
             continue
-        print(f'{container["REPO"]}:{container["TAG"]}')
+        logger.info(f'{container["REPO"]}:{container["TAG"]}')
 
 
 def parse_container_attributes(container):
@@ -292,7 +298,7 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
         # Skip if the container was previously scanned in the current window
         if qualified_repo in scanned_container_cache.keys():
             if tag in scanned_container_cache[qualified_repo]:
-                print(f'Skipping previously scanned {qualified_repo} with tag "{tag}"')
+                logger.info(f'Skipping previously scanned {qualified_repo} with tag "{tag}"')
                 skipped_containers += 1
                 continue
 
@@ -307,7 +313,7 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
 
         deduped_container_scan_queue.append(container)
 
-    print(f'Skipped containers due to previous result: {skipped_containers}')
+    logger.info(f'Skipped containers due to previous result: {skipped_containers}')
 
     return deduped_container_scan_queue
 
@@ -320,7 +326,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
     if (args.inline_scanner or args.inline_scanner_access_token) and \
        (args.inline_scanner_only or registry not in registry_domains):
         scan_msg += '(Inline Scanner)'
-        print(scan_msg)
+        logger.info(scan_msg)
 
         account_name = lw_client._account
 
@@ -331,7 +337,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
 
     elif args.proxy_scanner:
         scan_msg += '(Proxy Scanner)'
-        print(scan_msg)
+        logger.info(scan_msg)
 
         session = requests.Session()
         executor_tasks.append(executor.submit(
@@ -341,7 +347,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
 
     else:
         scan_msg += '(Platform Scanner)'
-        print(scan_msg)
+        logger.info(scan_msg)
 
         executor_tasks.append(executor.submit(
             initiate_platform_scan, lw_client,
@@ -350,7 +356,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
 
 
 def scan_containers(lw_client, container_scan_queue, registry_domains, args):
-    print(f'Containers to Scan: {len(container_scan_queue)}')
+    logger.info(f'Containers to Scan: {len(container_scan_queue)}')
 
     i = 0
 
@@ -364,6 +370,9 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
             registry, repository, tag = parse_container_attributes(container)
 
             if tag == '':
+                error_message = f'Skipping {registry}/{repository} as the tag was empty.'
+                logger.info(error_message)
+                save_failed_scan(f'{registry}/{repository}', tag, error_message)
                 continue
 
             create_scan_task(executor, executor_tasks, lw_client, registry, repository, tag,
@@ -374,17 +383,17 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
             result = task.result()
             if result:
                 j += 1
-                print(f'Finished scanning {result["repository"]}:{result["tag"]}. Result {j} of {i}')
+                logger.info(f'Finished scanning {result["repository"]}:{result["tag"]}. ({j} of {i})')
                 if result['error'] is not None:
                     scan_errors.append(result)
 
     if scan_errors:
-        print("""\nImages erroring out on scan listed below.  Common issues include the following:
+        logger.info("""\nImages erroring out on scan listed below.  Common issues include the following:
         - The container base image OS is unsupported.
         - The container isn't accessible through currently configured credentials.
         For a list of supported base images, see: https://docs.lacework.com/container-image-support\n""")
 
-        print(tabulate(scan_errors, headers='keys'))
+        logger.info('Scan Errors:\n' + tabulate(scan_errors, headers='keys'))
 
 
 def main(args):
@@ -401,6 +410,7 @@ def main(args):
         raise
 
     if args.debug:
+        logger.setLevel('DEBUG')
         logging.basicConfig(level=logging.DEBUG)
 
     if args.days:
@@ -581,5 +591,5 @@ if __name__ == '__main__':
         else:
             main(args)
     except Exception as e:
-        logging.error(e)
+        logger.error(e)
         parser.print_help()
