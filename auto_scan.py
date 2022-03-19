@@ -418,6 +418,10 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
 
 def main(args):
 
+    if args.org_level and (args.inline_scanner or args.inline_scanner_access_token):
+        logger.error('Currently the --org-level argument is not compatible with the Inline Scanner.')
+        exit()
+
     try:
         lw_client = LaceworkClient(
             account=args.account,
@@ -587,7 +591,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--org-level',
         action='store_true',
-        help='Iterate through each Account in an Organization'
+        help='Iterate through each Account in an Organization (Platform Scanner Only)'
     )
     parser.add_argument(
         '-d', '--daemon',
