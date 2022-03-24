@@ -24,6 +24,7 @@ FAILED_SCAN_CACHE_REASONS = [
 ]
 INTERVAL = 1200
 PAGINATION_MAX = 5000
+SCANNER_INTEGRATION_NAME = 'lacework-auto-scan'
 WORKER_THREADS = 10
 
 logging.basicConfig(
@@ -52,7 +53,7 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
         repository = scanned_container['IMAGE_REPO']
         tags = scanned_container['IMAGE_TAGS']
 
-        qualified_repo = f'{registry}/{repository}'
+        qualified_repo = f'{registry}/{repository}'.lstrip('/')
 
         if qualified_repo not in scanned_container_cache.keys():
             scanned_container_cache[qualified_repo] = tags
@@ -111,6 +112,48 @@ def get_container_registry_domains(lw_client):
     logger.info(f'Returned Container Domains: {registry_domains}')
 
     return registry_domains
+
+
+def get_inline_scanner_access_token(lw_client):
+    logger.info('Looking for existing Inline Scanner...')
+
+    response = lw_client.container_registries.search(json={
+        'filters': [
+            {
+                'expression': 'eq',
+                'field': 'name',
+                'value': SCANNER_INTEGRATION_NAME
+            }
+        ]
+    })
+
+    for integration in response.get('data', []):
+        logger.info('Inline Scanner found.')
+        logger.debug(json.dumps(integration))
+        return integration.get('serverToken', {}).get('serverToken')
+
+    logger.info('Inline Scanner not found.')
+
+
+def create_inline_scanner_integration(lw_client):
+    logger.info('Creating new Inline Scanner...')
+
+    response = lw_client.container_registries.create(
+        name=SCANNER_INTEGRATION_NAME,
+        type='ContVulnCfg',
+        enabled=True,
+        data={
+            'registryType': 'INLINE_SCANNER',
+            'limitNumScan': '60'
+        }
+    )
+
+    logger.info('Inline Scanner created.')
+    logger.debug(json.dumps(response))
+
+    access_token = response.get('data', {}).get('serverToken', {}).get('serverToken')
+
+    return access_token
 
 
 def get_active_containers(lw_client, start_time, end_time, registry_domains=None):
@@ -343,7 +386,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
                      registry_domains, args, i):
     scan_msg = f'Scanning {registry}/{repository} with tag "{tag}" ({i}) '
 
-    if (args.inline_scanner or args.inline_scanner_access_token) and \
+    if (args.inline_scanner or args.inline_scanner_access_token or args.auto_integrate_inline_scanner) and \
        (args.inline_scanner_only or registry not in registry_domains):
         scan_msg += '(Inline Scanner)'
         logger.info(scan_msg)
@@ -418,8 +461,8 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
 
 def main(args):
 
-    if args.org_level and (args.inline_scanner or args.inline_scanner_access_token):
-        logger.error('Currently the --org-level argument is not compatible with the Inline Scanner.')
+    if args.org_level and not args.auto_integrate_inline_scanner and (args.inline_scanner or args.inline_scanner_access_token):
+        logger.error('Currently the --org-level argument is only compatible with auto-integrated Inline Scanner.')
         exit()
 
     try:
@@ -478,7 +521,16 @@ def main(args):
 
         # Inline scanner usage doesn't need to lookup registries
         # However, we should honor them if manually entered
-        if args.inline_scanner or args.inline_scanner_access_token:
+        if args.inline_scanner or args.inline_scanner_access_token or args.auto_integrate_inline_scanner:
+
+            # If we're auto integrating the Inline Scanner, get the access token, or create one
+            if args.auto_integrate_inline_scanner:
+                existing_access_token = get_inline_scanner_access_token(lw_client)
+                if not existing_access_token:
+                    existing_access_token = create_inline_scanner_integration(lw_client)
+
+                args.inline_scanner_access_token = existing_access_token
+
             if args.registry:
                 container_scan_queue = get_active_containers(lw_client, start_time, end_time, registry_domains)
             else:
@@ -563,6 +615,11 @@ if __name__ == '__main__':
         dest='list_only',
         action='store_true',
         help='Only list active containers for integrated/specified registries (no scans)'
+    )
+    parser.add_argument(
+        '--auto-integrate-inline-scanner',
+        action='store_true',
+        help='Automatically create and use inline scanner integration(s)'
     )
     parser.add_argument(
         '--inline-scanner',
