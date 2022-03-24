@@ -66,9 +66,10 @@ docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var
 - The Inline Scanner based container repository is named `container-auto-scan-inline` instead of `container-auto-scan`
 - The Inline Scanner based container runs as `root` rather than `user`
   - As a result, the `lacework.toml` file is mounted in `/root/` rather than `/home/user/`
-- The Inline Scanner based scans require an access token be provided in one of two ways:
+- The Inline Scanner based scans require an access token be provided in one of three ways:
   - The `--inline-scanner-access-token` argument
   - The `LW_ACCESS_TOKEN` environment variable while setting the `--inline-scanner` argument
+  - The `--auto-integrate-inline-scanner` argument (This will automatically create/re-use an integration per-account)
 - The Inline Scanner is currently limited to [60 scans per hour](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas).
 
 ### Kubernetes Manifest
