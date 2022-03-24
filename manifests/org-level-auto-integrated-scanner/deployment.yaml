@@ -7,7 +7,6 @@ type: Opaque
 data:
   api-key: <BASE64_ENCODED_API_KEY>
   api-secret: <BASE64_ENCODED_API_SECRET>
-  access-token: <BASE64_ENCODED_ACCESS_TOKEN>
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,7 +26,7 @@ spec:
       containers:
       - image: alannix/container-auto-scan-inline:latest
         name: lacework-auto-scan
-        args: ["-d", "--inline-scanner"]
+        args: ["-d", "--auto-integrate-inline-scanner", "--org-level"]
         env:
         - name: LW_ACCOUNT
           value: "<LACEWORK_ACCOUNT_NAME>"
@@ -41,11 +40,6 @@ spec:
             secretKeyRef:
               name: lacework-api
               key: api-secret
-        - name: LW_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: lacework-api
-              key: access-token
         securityContext:
           privileged: true
         volumeMounts:
