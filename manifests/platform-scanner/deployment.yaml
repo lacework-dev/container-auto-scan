@@ -29,7 +29,7 @@ spec:
         args: ["-d"]
         env:
         - name: LW_ACCOUNT
-          value: "lacework"
+          value: "<LACEWORK_ACCOUNT_NAME>"
         - name: LW_API_KEY
           valueFrom:
             secretKeyRef:

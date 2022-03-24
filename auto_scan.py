@@ -285,10 +285,8 @@ def initiate_platform_scan(lw_client, registry, repository, tag):
             tag
         )
     except RateLimitError as e:
-        error_message = f'Received rate limit response from Lacework. Exiting to prevent ' \
-                        f'exasperating the issue. Error: {e}'
+        error_message = f'Received rate limit response from Lacework. Error: {e}'
         logger.warning(error_message)
-        os._exit(1)
     except ApiError as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
