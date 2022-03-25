@@ -51,18 +51,17 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
 
         registry = scanned_container['IMAGE_REGISTRY']
         repository = scanned_container['IMAGE_REPO']
-        tags = scanned_container['IMAGE_TAGS']
+        image_id = scanned_container['IMAGE_ID']
+        # tags = scanned_container['IMAGE_TAGS']
 
         qualified_repo = f'{registry}/{repository}'.lstrip('/')
 
         if qualified_repo not in scanned_container_cache.keys():
-            scanned_container_cache[qualified_repo] = tags
-            returned_containers += len(tags)
+            scanned_container_cache[qualified_repo] = [image_id]
         else:
-            for tag in tags:
-                if tag not in scanned_container_cache[qualified_repo]:
-                    scanned_container_cache[qualified_repo].append(tag)
-                    returned_containers += 1
+            scanned_container_cache[qualified_repo].append(image_id)
+
+        returned_containers += 1
 
     logger.info(f'Previously Assessed Container Count: {returned_containers}')
     logger.debug(json.dumps(scanned_container_cache, indent=4))
@@ -77,18 +76,19 @@ def build_container_query(registry=None):
         if registry == 'index.docker.io':
             registry = 'docker.io'
         query_text += f" filter {{ starts_with(REPO, '{registry}') }}"
-    query_text += ' return distinct {REPO, TAG} }'
+    query_text += ' return distinct {REPO, IMAGE_ID, TAG} }'
 
     logger.debug(f'LQL Query: {query_text}')
 
     return query_text
 
 
-def build_scan_result(scanner_type, repository, tag, error=None):
+def build_scan_result(scanner_type, repository, image_id, tag, error=None):
 
     result_message = {
         'scanner_type': scanner_type,
         'repository': repository,
+        'image_id': image_id,
         'tag': tag,
         'error': error
     }
@@ -216,19 +216,19 @@ def load_failed_scans():
         return {}
 
 
-def save_failed_scan(qualified_repo, tag, reason):
+def save_failed_scan(qualified_repo, image_id, reason):
     failed_scan_cache = load_failed_scans()
 
     if qualified_repo not in failed_scan_cache.keys():
-        failed_scan_cache[qualified_repo] = {tag: reason}
+        failed_scan_cache[qualified_repo] = {image_id: reason}
     else:
-        failed_scan_cache[qualified_repo][tag] = reason
+        failed_scan_cache[qualified_repo][image_id] = reason
 
     with open(FAILED_SCAN_CACHE, 'w') as output_file:
         json.dump(failed_scan_cache, output_file, indent=2)
 
 
-def initiate_inline_scan(registry, repository, tag, args,
+def initiate_inline_scan(registry, repository, image_id, tag, args,
                          access_token=None, account_name=None):
 
     error_message = None
@@ -266,14 +266,14 @@ def initiate_inline_scan(registry, repository, tag, args,
         # Cache failure results for specific messages
         for error_substr in FAILED_SCAN_CACHE_REASONS:
             if error_substr in error_message:
-                save_failed_scan(qualified_repo, tag, error_message)
+                save_failed_scan(qualified_repo, image_id, error_message)
 
     logger.debug(output.stdout)
 
-    return build_scan_result('Inline', qualified_repo, tag, error_message)
+    return build_scan_result('Inline', qualified_repo, image_id, tag, error_message)
 
 
-def initiate_platform_scan(lw_client, registry, repository, tag):
+def initiate_platform_scan(lw_client, registry, repository, image_id, tag):
 
     error_message = None
     qualified_repo = f'{registry}/{repository}'
@@ -298,10 +298,10 @@ def initiate_platform_scan(lw_client, registry, repository, tag):
                         f'"{tag}". Error: {e}'
         logger.warning(error_message)
 
-    return build_scan_result('Platform', qualified_repo, tag, error_message)
+    return build_scan_result('Platform', qualified_repo, image_id, tag, error_message)
 
 
-def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, tag):
+def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, image_id, tag):
 
     error_message = None
     qualified_repo = f'{registry}/{repository}'
@@ -320,7 +320,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, tag):
                         f'"{tag}". Error: {e}'
         logger.warning(error_message)
 
-    return build_scan_result('Proxy', qualified_repo, tag, error_message)
+    return build_scan_result('Proxy', qualified_repo, image_id, tag, error_message)
 
 
 def list_containers(containers):
@@ -334,12 +334,13 @@ def parse_container_attributes(container):
 
     # Parse the container registry and repository
     registry, repository = container['REPO'].split('/', 1)
+    image_id = container['IMAGE_ID']
     tag = container['TAG']
 
     if registry == 'docker.io':
         registry = 'index.docker.io'
 
-    return registry, repository, tag
+    return registry, repository, image_id, tag
 
 
 def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, registry_domains):
@@ -354,21 +355,21 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
 
     for container in container_scan_queue:
 
-        registry, repository, tag = parse_container_attributes(container)
+        registry, repository, image_id, tag = parse_container_attributes(container)
 
         qualified_repo = f'{registry}/{repository}'
 
         # Skip if the container was previously scanned in the current window
         if qualified_repo in scanned_container_cache.keys():
-            if tag in scanned_container_cache[qualified_repo]:
-                logger.info(f'Skipping previously scanned {qualified_repo} with tag "{tag}"')
+            if image_id in scanned_container_cache[qualified_repo]:
+                logger.info(f'Skipping previously scanned {qualified_repo} with image ID "{image_id}"')
                 skipped_containers += 1
                 continue
 
         # Skip if the container has a previously failed scan
         if qualified_repo in failed_scan_cache.keys():
-            if tag in failed_scan_cache[qualified_repo].keys():
-                logger.info(f'Skipping previously failed {qualified_repo} with tag "{tag}"')
+            if image_id in failed_scan_cache[qualified_repo].keys():
+                logger.info(f'Skipping previously failed {qualified_repo} with image ID "{image_id}"')
                 skipped_containers += 1
                 continue
 
@@ -380,7 +381,7 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
 
 
 def create_scan_task(executor, executor_tasks, lw_client,
-                     registry, repository, tag,
+                     registry, repository, image_id, tag,
                      registry_domains, args, i):
     scan_msg = f'Scanning {registry}/{repository} with tag "{tag}" ({i}) '
 
@@ -392,7 +393,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
         account_name = lw_client._account
 
         executor_tasks.append(executor.submit(
-            initiate_inline_scan, registry, repository, tag,
+            initiate_inline_scan, registry, repository, image_id, tag,
             args, access_token=args.inline_scanner_access_token, account_name=account_name
         ))
 
@@ -403,7 +404,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
         session = requests.Session()
         executor_tasks.append(executor.submit(
             initiate_proxy_scan, session, args.proxy_scanner,
-            registry, repository, tag
+            registry, repository, image_id, tag
         ))
 
     else:
@@ -412,7 +413,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
 
         executor_tasks.append(executor.submit(
             initiate_platform_scan, lw_client,
-            registry, repository, tag
+            registry, repository, image_id, tag
         ))
 
 
@@ -427,16 +428,16 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
     with ThreadPoolExecutor(max_workers=WORKER_THREADS) as executor:
         for container in container_scan_queue:
 
-            registry, repository, tag = parse_container_attributes(container)
+            registry, repository, image_id, tag = parse_container_attributes(container)
             if tag == '':
                 error_message = f'Skipping {registry}/{repository} as the tag was empty.'
                 logger.info(error_message)
-                save_failed_scan(f'{registry}/{repository}', tag, error_message)
+                save_failed_scan(f'{registry}/{repository}', image_id, error_message)
                 continue
 
             i += 1
 
-            create_scan_task(executor, executor_tasks, lw_client, registry, repository, tag,
+            create_scan_task(executor, executor_tasks, lw_client, registry, repository, image_id, tag,
                              registry_domains, args, i)
 
         j = 0
