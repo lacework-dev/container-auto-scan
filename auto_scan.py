@@ -484,7 +484,7 @@ def main(args):
     else:
         days_back = 1
 
-    subaccounts = [args.subaccount]
+    subaccounts = [lw_client._subaccount]
 
     if args.org_level:
         lw_client.set_org_level_access(True)
