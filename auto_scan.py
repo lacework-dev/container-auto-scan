@@ -18,9 +18,11 @@ from tabulate import tabulate
 
 SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
 FAILED_SCAN_CACHE = f'{SCAN_CACHE_DIR}/failed_scan_cache.json'
+FAILED_SCAN_CACHE_DAYS = 1
 FAILED_SCAN_CACHE_REASONS = [
     'ERROR: Unsupported base image OS.',
-    'ERROR: Error while scanning image: Docker daemon is not running locally.'
+    'ERROR: Error while scanning image: Docker daemon is not running locally.',
+    'ERROR: Error while scanning image: No docker image found.'
 ]
 INTERVAL = 1200
 PAGINATION_MAX = 5000
@@ -219,10 +221,21 @@ def load_failed_scans():
 def save_failed_scan(qualified_repo, image_id, reason):
     failed_scan_cache = load_failed_scans()
 
+    current_time = datetime.now(timezone.utc)
+    expiry_time = current_time + timedelta(days=FAILED_SCAN_CACHE_DAYS)
+    expiry_time = int(expiry_time.timestamp())
+
+    failed_scan_data = {
+        'error': reason,
+        'expiry': expiry_time
+    }
+
     if qualified_repo not in failed_scan_cache.keys():
-        failed_scan_cache[qualified_repo] = {image_id: reason}
+        failed_scan_cache[qualified_repo] = {
+            image_id: failed_scan_data
+        }
     else:
-        failed_scan_cache[qualified_repo][image_id] = reason
+        failed_scan_cache[qualified_repo][image_id] = failed_scan_data
 
     with open(FAILED_SCAN_CACHE, 'w') as output_file:
         json.dump(failed_scan_cache, output_file, indent=2)
@@ -369,9 +382,22 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
         # Skip if the container has a previously failed scan
         if qualified_repo in failed_scan_cache.keys():
             if image_id in failed_scan_cache[qualified_repo].keys():
-                logger.info(f'Skipping previously failed {qualified_repo} with image ID "{image_id}"')
-                skipped_containers += 1
-                continue
+
+                current_time = int(time.time())
+                try:
+                    if current_time > failed_scan_cache[qualified_repo][image_id]['expiry']:
+                        logger.info(f'Removing previously failed scan result for {qualified_repo} with image ID '
+                                    f'"{image_id}" due to expiration')
+                        del failed_scan_cache[qualified_repo][image_id]
+                    else:
+                        logger.info(f'Skipping previously failed {qualified_repo} with image ID "{image_id}"')
+                        skipped_containers += 1
+                        continue
+                except KeyError as err:
+                    # If this fails, it's likely due to an old cache before expirations were implemented
+                    # Rebuild the cache
+                    logger.warning(f'KeyError raised on {err}. Clearing failed scan cache...')
+                    os.remove(FAILED_SCAN_CACHE)
 
         deduped_container_scan_queue.append(container)
 
