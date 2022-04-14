@@ -71,6 +71,7 @@ docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var
   - The `LW_ACCESS_TOKEN` environment variable while setting the `--inline-scanner` argument
   - The `--auto-integrate-inline-scanner` argument (This will automatically create/re-use an integration per-account)
 - The Inline Scanner is currently limited to [60 scans per hour](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas).
+- If you are using the Inline Scanner to scan against images which may be hosted in a remote registry, credentials can be passed into the scanner as a volume mount. For example, inserting `-v /root/.docker/config.json:/root/.docker/config.json` into the example above would pass the current root user's Docker credentials into the container to assume for pull operations. 
 
 ### Kubernetes Manifest
 
