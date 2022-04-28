@@ -496,10 +496,10 @@ def main(args):
     if args.org_level and not args.auto_integrate_inline_scanner and (args.inline_scanner or args.inline_scanner_access_token):
         logger.error('Currently the --org-level argument is only compatible with auto-integrated Inline Scanner.')
         exit()
-    
+
     if args.proxy_scanner and not args.registry:
-        logger.error('--proxy-scanner passed without --registry configuration. Please specify both arguments to execute proxy scans.')
-        exit() 
+        logger.error('--proxy-scanner passed without --registry flag. Please specify both arguments to execute proxy scans.')
+        exit()
 
     try:
         lw_client = LaceworkClient(
