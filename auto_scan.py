@@ -497,6 +497,10 @@ def main(args):
         logger.error('Currently the --org-level argument is only compatible with auto-integrated Inline Scanner.')
         exit()
 
+    if (args.inline_scanner or args.inline_scanner_access_token) and args.registry and not args.inline_scanner_only:
+        logger.warning('Inline scanner in use with --registry specified. Registries will be scanned using platform scanner.')
+        logger.warning('Use --inline-scanner-only to scan these target registries using the inline scanner')
+
     if args.proxy_scanner and not args.registry:
         logger.error('--proxy-scanner passed without --registry flag. Please specify both arguments to execute proxy scans.')
         exit()
