@@ -213,7 +213,14 @@ def load_failed_scans():
     if os.path.isfile(FAILED_SCAN_CACHE):
         # Open the CONFIG_FILE and load it
         with open(FAILED_SCAN_CACHE, 'r') as failed_scan_cache:
-            return json.loads(failed_scan_cache.read())
+            try:
+                return json.loads(failed_scan_cache.read())
+            except Exception as err:
+                # If this fails, it's likely due to an old cache before expirations were implemented
+                # Rebuild the cache
+                logger.warning(f'Error loading failed scan cache: {err}. Clearing failed scan cache...')
+                os.remove(FAILED_SCAN_CACHE)
+                return {}
     else:
         return {}
 
