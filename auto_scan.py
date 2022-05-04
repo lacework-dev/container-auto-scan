@@ -213,7 +213,14 @@ def load_failed_scans():
     if os.path.isfile(FAILED_SCAN_CACHE):
         # Open the CONFIG_FILE and load it
         with open(FAILED_SCAN_CACHE, 'r') as failed_scan_cache:
-            return json.loads(failed_scan_cache.read())
+            try:
+                return json.loads(failed_scan_cache.read())
+            except Exception as err:
+                # If this fails, it's likely due to an old cache before expirations were implemented
+                # Rebuild the cache
+                logger.warning(f'Error loading failed scan cache: {err}. Clearing failed scan cache...')
+                os.remove(FAILED_SCAN_CACHE)
+                return {}
     else:
         return {}
 
@@ -484,11 +491,27 @@ def scan_containers(lw_client, container_scan_queue, registry_domains, args):
         logger.info('Scan Errors:\n' + tabulate(scan_errors, headers='keys'))
 
 
-def main(args):
-
+def assess_arguments(args):
     if args.org_level and not args.auto_integrate_inline_scanner and (args.inline_scanner or args.inline_scanner_access_token):
         logger.error('Currently the --org-level argument is only compatible with auto-integrated Inline Scanner.')
         exit()
+
+    # if we're using an inline scanner flag, and have specified registries, but have not specified inline-scanner-only
+    if (
+            (args.inline_scanner or args.inline_scanner_access_token or args.auto_integrate_inline_scanner)
+            and args.registry
+            and not args.inline_scanner_only
+       ):
+        logger.warning('Inline scanner in use with --registry specified. Images from registries will be scanned using platform scanner. Use --inline-scanner-only to scan images from these target registries using the inline scanner')  # noqa 
+
+    if args.proxy_scanner and not args.registry:
+        logger.error('--proxy-scanner passed without --registry flag. Please specify both arguments to execute proxy scans.')
+        exit()
+
+
+def main(args):
+
+    assess_arguments(args)
 
     try:
         lw_client = LaceworkClient(

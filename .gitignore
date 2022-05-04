@@ -9,6 +9,7 @@ logs/
 # Virtual Environments
 .venv/
 venv/
+env/
 
 # Test artifacts
 .cache/
