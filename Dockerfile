@@ -8,6 +8,8 @@ ENV LANG=C.UTF-8
 
 WORKDIR /app
 
+RUN mkdir cache
+
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
