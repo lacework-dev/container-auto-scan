@@ -505,15 +505,15 @@ def assess_arguments(args):
             and not args.inline_scanner_only
        ):
         logger.warning(
-            "Inline scanner in use with --registry specified. "
-            "Images from registries will be scanned using platform scanner. "
-            "Use --inline-scanner-only to scan images from these target registries using the inline scanner"
+            'Inline scanner in use with --registry specified. '
+            'Images from registries will be scanned using platform scanner. '
+            'Use --inline-scanner-only to scan images from these target registries using the inline scanner'
         )
 
     if args.proxy_scanner and not args.registry:
         logger.warning(
-            "--proxy-scanner passed without --registry flag. "
-            "Please verify that \"scan_public_registries: true\" is set in the Proxy Scanner configuration."
+            '--proxy-scanner passed without --registry flag. '
+            'Please verify that "scan_public_registries: true" is set in the Proxy Scanner configuration.'
         )
 
 
