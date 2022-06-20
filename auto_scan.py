@@ -321,10 +321,12 @@ def initiate_platform_scan(lw_client, registry, repository, image_id, tag):
     return build_scan_result('Platform', qualified_repo, image_id, tag, error_message)
 
 
-def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, image_id, tag):
+def initiate_proxy_scan(session, proxy_scanner_addr, skip_validation, registry, repository, image_id, tag):
 
     error_message = None
     qualified_repo = f'{registry}/{repository}'
+
+    verify_cert = not bool(skip_validation)
 
     try:
         json = {
@@ -333,7 +335,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, registry, repository, image
             'tag': tag
         }
 
-        response = session.post(f'{proxy_scanner_addr}/v1/scan', json=json)
+        response = session.post(f'{proxy_scanner_addr}/v1/scan', json=json, verify=verify_cert)
         response.raise_for_status()
     except Exception as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
@@ -436,7 +438,7 @@ def create_scan_task(executor, executor_tasks, lw_client,
 
         session = requests.Session()
         executor_tasks.append(executor.submit(
-            initiate_proxy_scan, session, args.proxy_scanner,
+            initiate_proxy_scan, session, args.proxy_scanner, args.proxy_scanner_skip_validation,
             registry, repository, image_id, tag
         ))
 
@@ -641,6 +643,12 @@ if __name__ == '__main__':
         default=None,
         type=str,
         help='The address of a Lacework proxy scanner: http(s)://[address]:[port]'
+    )
+    parser.add_argument(
+        '--proxy-scanner-skip-validation',
+        action='store_true',
+        default=False,
+        help='Skip validation of Lacework proxy scanner TLS certificate'
     )
     parser.add_argument(
         '--days',
