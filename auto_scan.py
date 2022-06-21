@@ -591,8 +591,14 @@ def main(args):
                 container_scan_queue = get_active_containers(lw_client, start_time, end_time, registry_domains)
             else:
                 container_scan_queue = get_active_containers(lw_client, start_time, end_time)
+        elif args.proxy_scanner:
+            # If using a proxy scanner, check to see if registries were specified
+            if args.registry:
+                container_scan_queue = get_active_containers(lw_client, start_time, end_time, registry_domains)
+            else:
+                container_scan_queue = get_active_containers(lw_client, start_time, end_time)
         else:
-            # Query for active containers across registries
+            # Query for active containers across integrated registries
             container_scan_queue = get_active_containers(lw_client, start_time, end_time, registry_domains)
 
         if args.list_only:
