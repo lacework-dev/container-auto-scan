@@ -27,7 +27,7 @@ FAILED_SCAN_CACHE_REASONS = [
 INTERVAL = 1200
 PAGINATION_MAX = 5000
 SCANNER_INTEGRATION_NAME = 'lacework-auto-scan'
-WORKER_THREADS = 10
+WORKER_THREADS = int(os.getenv('WORKER_THREADS', 10))
 
 logging.basicConfig(
     format='%(asctime)s %(name)s [%(levelname)s] %(message)s'
