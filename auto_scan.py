@@ -56,8 +56,13 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
         repository = scanned_container['IMAGE_REPO']
         image_id = scanned_container['IMAGE_ID']
         # tags = scanned_container['IMAGE_TAGS']
-
-        qualified_repo = f'{registry}/{repository}'.lstrip('/')
+        
+        # Images scanned by the inline already contains the registry name
+        if repository.startswith(registry):
+            qualified_repo = f'{repository}'.lstrip('/')
+        else:
+            qualified_repo = f'{registry}/{repository}'.lstrip('/')
+        
         qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
 
         if qualified_repo not in scanned_container_cache.keys():
