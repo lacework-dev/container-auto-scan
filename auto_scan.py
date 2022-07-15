@@ -17,6 +17,7 @@ from laceworksdk.exceptions import ApiError, RateLimitError
 from tabulate import tabulate
 
 SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
+FAILED_SCANS = None
 FAILED_SCAN_CACHE = f'{SCAN_CACHE_DIR}/failed_scan_cache.json'
 FAILED_SCAN_CACHE_DAYS = 1
 FAILED_SCAN_CACHE_REASONS = [
@@ -57,6 +58,7 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
         # tags = scanned_container['IMAGE_TAGS']
 
         qualified_repo = f'{registry}/{repository}'.lstrip('/')
+        qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
 
         if qualified_repo not in scanned_container_cache.keys():
             scanned_container_cache[qualified_repo] = [image_id]
@@ -208,21 +210,26 @@ def get_active_containers(lw_client, start_time, end_time, registry_domains=None
 
 
 def load_failed_scans():
-    # If we have a stored scan cache, then use it
-    # Otherwise create an empty one
-    if os.path.isfile(FAILED_SCAN_CACHE):
-        # Open the CONFIG_FILE and load it
-        with open(FAILED_SCAN_CACHE, 'r') as failed_scan_cache:
-            try:
-                return json.loads(failed_scan_cache.read())
-            except Exception as err:
-                # If this fails, it's likely due to an old cache before expirations were implemented
-                # Rebuild the cache
-                logger.warning(f'Error loading failed scan cache: {err}. Clearing failed scan cache...')
-                os.remove(FAILED_SCAN_CACHE)
-                return {}
+    # To prevent issues reading/writing only load the failed scan cache from disk once
+    # Otherwise, we'll just reference the variable
+    if FAILED_SCANS:
+        return FAILED_SCANS
     else:
-        return {}
+        # If we have a stored scan cache, then use it
+        # Otherwise create an empty one
+        if os.path.isfile(FAILED_SCAN_CACHE):
+            # Open the CONFIG_FILE and load it
+            with open(FAILED_SCAN_CACHE, 'r') as failed_scan_cache:
+                try:
+                    return json.loads(failed_scan_cache.read())
+                except Exception as err:
+                    # If this fails, it's likely due to an old cache before expirations were implemented
+                    # Rebuild the cache
+                    logger.warning(f'Error loading failed scan cache: {err}. Clearing failed scan cache...')
+                    os.remove(FAILED_SCAN_CACHE)
+                    return {}
+        else:
+            return {}
 
 
 def save_failed_scan(qualified_repo, image_id, reason):
@@ -312,7 +319,7 @@ def initiate_platform_scan(lw_client, registry, repository, image_id, tag):
                         f'"{tag}". Error: {e}'
         logger.warning(error_message)
         if 400 <= e.status_code < 500:
-            save_failed_scan(qualified_repo, tag, error_message)
+            save_failed_scan(qualified_repo, image_id, error_message)
     except Exception as e:
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
@@ -341,6 +348,7 @@ def initiate_proxy_scan(session, proxy_scanner_addr, skip_validation, registry, 
         error_message = f'Failed to scan container {qualified_repo} with tag ' \
                         f'"{tag}". Error: {e}'
         logger.warning(error_message)
+        save_failed_scan(qualified_repo, image_id, error_message)
 
     return build_scan_result('Proxy', qualified_repo, image_id, tag, error_message)
 
