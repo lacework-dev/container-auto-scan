@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-ENV LW_SCANNER_VERSION=0.2.14
+ENV LW_SCANNER_VERSION=0.6.0
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
