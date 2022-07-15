@@ -2,6 +2,8 @@ name: Run Python Tests/Linting
 
 on:
   push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -13,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
 
     steps:
       - uses: actions/checkout@v2
