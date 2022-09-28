@@ -367,8 +367,8 @@ def list_containers(containers):
 
 def parse_container_attributes(container):
 
-    # Parse the container registry and repository
-    registry, repository = container['REPO'].split('/', 1)
+    # Parse the container registry and repository - special handling for repo being 'none'
+    registry, repository = container['REPO'].split('/', 1) if container['REPO'] != 'none' else ('', '')
     image_id = container['IMAGE_ID']
     tag = container['TAG']
 
@@ -420,6 +420,11 @@ def deduplicate_scans(lw_client, start_time, end_time, container_scan_queue, reg
                     # Rebuild the cache
                     logger.warning(f'KeyError raised on {err}. Clearing failed scan cache...')
                     os.remove(FAILED_SCAN_CACHE)
+
+        # Skip the container if issues parsing repo...
+        if qualified_repo == '/':
+            logger.info(f'Skipping assessment for container due to no parseable repo: {container}')
+            continue
 
         deduped_container_scan_queue.append(container)
 
@@ -753,5 +758,5 @@ if __name__ == '__main__':
         else:
             main(args)
     except Exception as e:
-        logger.error(e)
+        logger.error(e, exc_info=True)
         parser.print_help()
