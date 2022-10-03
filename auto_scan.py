@@ -86,7 +86,7 @@ def build_container_query(registry=None):
             registry = 'docker.io'
         query_text += f" filter {{ starts_with(REPO, '{registry}') }}"
     else:
-        query_text += " filter {{ REPO <> 'none' }}"
+        query_text += " filter { REPO <> 'none' }"
     query_text += ' return distinct {REPO, IMAGE_ID, TAG} }'
 
     logger.debug(f'LQL Query: {query_text}')
