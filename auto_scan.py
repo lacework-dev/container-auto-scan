@@ -755,5 +755,5 @@ if __name__ == '__main__':
         else:
             main(args)
     except Exception as e:
-        logger.error(e)
+        logger.error(e, exc_info=True)
         parser.print_help()
