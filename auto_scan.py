@@ -70,12 +70,13 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
                 qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
 
                 if qualified_repo not in scanned_container_cache.keys():
-                    print(image_id)
                     scanned_container_cache[qualified_repo] = set([image_id])
                     returned_containers += 1
                 elif image_id not in scanned_container_cache[qualified_repo]:
                     scanned_container_cache[qualified_repo].add(image_id)
                     returned_containers += 1
+                else:
+                    continue
 
 
     logger.info(f'Previously Assessed Container Count: {returned_containers}')
