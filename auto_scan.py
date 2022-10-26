@@ -40,41 +40,47 @@ logger.setLevel(os.getenv('LOG_LEVEL', logging.INFO))
 def build_container_assessment_cache(lw_client, start_time, end_time):
     logger.info(f'Fetching container assessments since "{start_time}"...')
 
-    scanned_containers = lw_client.vulnerabilities.get_container_assessments_by_date(
-        start_time=start_time,
-        end_time=end_time
-    )
+    scanned_containers = lw_client.vulnerabilities.containers.search(json={
+        "timeFilter":{
+            "startTime": start_time, 
+            "endTime": end_time
+        },
+        "returns": ["evalCtx"]
+    })
 
     logger.info('Building container assessment cache...')
 
     returned_containers = 0
     scanned_container_cache = {}
 
-    for scanned_container in scanned_containers.get('data', []):
+    for page in scanned_containers:
+        for scanned_container in page.get('data', []):
+            if 'evalCtx' in scanned_container and 'image_info' in scanned_container['evalCtx']:
+                registry = scanned_container['evalCtx']['image_info'].get('registry', '')
+                repository = scanned_container['evalCtx']['image_info'].get('repo', '')
+                image_id = scanned_container['evalCtx']['image_info'].get('id', '')
 
-        registry = scanned_container['IMAGE_REGISTRY']
-        repository = scanned_container['IMAGE_REPO']
-        image_id = scanned_container['IMAGE_ID']
-        # tags = scanned_container['IMAGE_TAGS']
+                # Images scanned by the inline already contains the registry name
+                if repository.startswith(registry):
+                    qualified_repo = f'{repository}'
+                else:
+                    qualified_repo = f'{registry}/{repository}'
 
-        # Images scanned by the inline already contains the registry name
-        if repository.startswith(registry):
-            qualified_repo = f'{repository}'
-        else:
-            qualified_repo = f'{registry}/{repository}'
-        qualified_repo = qualified_repo.lstrip('/')
-        qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
+                qualified_repo = qualified_repo.lstrip('/')
+                qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
 
-        if qualified_repo not in scanned_container_cache.keys():
-            scanned_container_cache[qualified_repo] = [image_id]
-        else:
-            scanned_container_cache[qualified_repo].append(image_id)
+                if qualified_repo not in scanned_container_cache.keys():
+                    print(image_id)
+                    scanned_container_cache[qualified_repo] = set([image_id])
+                    returned_containers += 1
+                elif image_id not in scanned_container_cache[qualified_repo]:
+                    scanned_container_cache[qualified_repo].add(image_id)
+                    returned_containers += 1
 
-        returned_containers += 1
 
     logger.info(f'Previously Assessed Container Count: {returned_containers}')
-    logger.debug(json.dumps(scanned_container_cache, indent=4))
-
+    logger.debug(scanned_container_cache)
+    
     return scanned_container_cache
 
 
