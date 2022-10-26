@@ -41,11 +41,11 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
     logger.info(f'Fetching container assessments since "{start_time}"...')
 
     scanned_containers = lw_client.vulnerabilities.containers.search(json={
-        "timeFilter":{
-            "startTime": start_time, 
-            "endTime": end_time
+        'timeFilter': {
+            'startTime': start_time,
+            'endTime': end_time
         },
-        "returns": ["evalCtx"]
+        'returns': ['evalCtx']
     })
 
     logger.info('Building container assessment cache...')
@@ -78,10 +78,9 @@ def build_container_assessment_cache(lw_client, start_time, end_time):
                 else:
                     continue
 
-
     logger.info(f'Previously Assessed Container Count: {returned_containers}')
     logger.debug(scanned_container_cache)
-    
+
     return scanned_container_cache
 
 
