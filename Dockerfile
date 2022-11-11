@@ -13,6 +13,7 @@ RUN mkdir cache
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
+COPY utils/*.py utils/
 COPY auto_scan.py ./
 
 ENTRYPOINT [ "python", "-u", "/app/auto_scan.py" ]

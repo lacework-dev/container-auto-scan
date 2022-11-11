@@ -2,15 +2,10 @@ import argparse
 
 import pytest
 
-from auto_scan import get_container_registry_domains, main
+from auto_scan import main
 from laceworksdk import LaceworkClient
 
 lw_client = LaceworkClient()
-
-
-def test_get_container_registry_domains():
-    response = get_container_registry_domains(lw_client)
-    assert type(response) == list
 
 
 def test_main_default():
