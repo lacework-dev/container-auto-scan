@@ -29,30 +29,36 @@ class ScanController:
     def __init__(self, lw_client, args, start_time, end_time):
         """
         :param lw_client: An instance of the LaceworkClient from the Lacework Python SDK
-        :param args: An argparse arguments object containing optional configuration parameters
+        :param args: An argparse arguments object containing optional configuration
+            parameters
             :obj
-                :param auto_integrate_inline_scanner: A boolean representing whether the ScanController
-                    should automatically integrate the Inline Scanner into the current account.
-                :param inline_scanner: A boolean representing whether the ScanController should use the
-                    Inline Scanner to execute scans.
-                :param inline_scanner_access_token: A string representing the Inline Scanner access token.
-                :param inline_scanner_only: A boolean representing whether the ScanController should
-                    exclusively use the Inline Scanner to execute scans.
-                :param inline_scanner_path: A string representing the path to the Inline Scanner
-                    binary. (Defaults to 'lw-scanner')
-                :param list_only: A boolean representing whether the ScanController should only list
-                    the containers to be scanned.
-                :param proxy_scanner: A string representing the Proxy Scanner address that the
-                    ScanController should use.
-                :param proxy_scanner_skip_validation: A boolean representing whether the ScanController
-                    should skip certificate validation for the Proxy Scanner.
-                :param registry: A string of comma separated registry domains in which to scan.
-                :param rescan: A boolean representing whether the ScanController should ignore the
-                    scan cache and rescan all containers.
-        :param start_time: A datetime object representing the start time for the active container
-            'lookback' period.
-        :param end_time: A datetime object representing the end time for the active container
-            'lookback' period.
+                :param auto_integrate_inline_scanner: A boolean representing whether
+                    the ScanController should automatically integrate the Inline Scanner
+                    into the current account.
+                :param inline_scanner: A boolean representing whether the ScanController
+                    should use the Inline Scanner to execute scans.
+                :param inline_scanner_access_token: A string representing the Inline
+                    Scanner access token.
+                :param inline_scanner_only: A boolean representing whether the
+                    ScanController should exclusively use the Inline Scanner to execute
+                    scans.
+                :param inline_scanner_path: A string representing the path to the
+                    Inline Scanner binary. (Defaults to 'lw-scanner')
+                :param list_only: A boolean representing whether the ScanController
+                    should only list the containers to be scanned.
+                :param proxy_scanner: A string representing the Proxy Scanner address
+                    that the ScanController should use.
+                :param proxy_scanner_skip_validation: A boolean representing whether
+                    the ScanController should skip certificate validation for the Proxy
+                    Scanner.
+                :param registry: A string of comma separated registry domains in which
+                    to scan.
+                :param rescan: A boolean representing whether the ScanController should
+                    ignore the scan cache and rescan all containers.
+        :param start_time: A datetime object representing the start time for the active
+            container 'lookback' period.
+        :param end_time: A datetime object representing the end time for the active
+            container 'lookback' period.
         """
 
         super().__init__()
@@ -74,29 +80,43 @@ class ScanController:
         else:
             self._registry_specified = False
 
-        # If using the inline/proxy scanner without specified registries - scan all containers
-        if (args.inline_scanner
-                or args.inline_scanner_access_token
-                or args.auto_integrate_inline_scanner
-                or args.proxy_scanner) and not self._registry_specified:
+        # If using the inline/proxy scanner without specified registries, scan
+        # all containers
+        if (
+            args.inline_scanner
+            or args.inline_scanner_access_token
+            or args.auto_integrate_inline_scanner
+            or args.proxy_scanner
+        ) and not self._registry_specified:
             self._scan_all_containers = True
 
         # If registries are specified, use that
         # Otherwise, scan containers from all integrated domains
         if self._registry_specified:
-            self._enabled_container_registries = [x.strip() for x in str(args.registry).split(',')]
+            self._enabled_container_registries = [
+                x.strip() for x in str(args.registry).split(',')
+            ]
         else:
             self._enabled_container_registries = self._get_container_registry_domains()
 
         # If using the inline scanner
-        if args.inline_scanner or args.inline_scanner_access_token or args.auto_integrate_inline_scanner:
+        if (
+            args.inline_scanner
+            or args.inline_scanner_access_token
+            or args.auto_integrate_inline_scanner
+        ):
             self._inline_scanner_access_token = args.inline_scanner_access_token
-            # If we're auto integrating the Inline Scanner, get the access token, or create one
+            # If we're auto integrating the Inline Scanner, get the access token,
+            # or create one
             if args.auto_integrate_inline_scanner:
-                self._inline_scanner_access_token = self._get_inline_scanner_access_token()
+                self._inline_scanner_access_token = (
+                    self._get_inline_scanner_access_token()
+                )
 
                 if not self._inline_scanner_access_token:
-                    self._inline_scanner_access_token = self._create_inline_scanner_integration()
+                    self._inline_scanner_access_token = (
+                        self._create_inline_scanner_integration()
+                    )
 
         self.scan_cache = None
         self.scan_cache = self._load_scan_cache()
@@ -137,16 +157,15 @@ class ScanController:
             name=self.SCANNER_INTEGRATION_NAME,
             type='ContVulnCfg',
             enabled=True,
-            data={
-                'registryType': 'INLINE_SCANNER',
-                'limitNumScan': '60'
-            }
+            data={'registryType': 'INLINE_SCANNER', 'limitNumScan': '60'},
         )
 
         logger.info('Inline Scanner created.')
         logger.debug(json.dumps(response))
 
-        access_token = response.get('data', {}).get('serverToken', {}).get('serverToken')
+        access_token = (
+            response.get('data', {}).get('serverToken', {}).get('serverToken')
+        )
 
         return access_token
 
@@ -165,7 +184,9 @@ class ScanController:
 
         for container in self.scan_queue:
 
-            registry, repository, image_id, tag = self._parse_container_attributes(container)
+            registry, repository, image_id, tag = self._parse_container_attributes(
+                container
+            )
 
             qualified_repo = f'{registry}/{repository}'
 
@@ -174,14 +195,23 @@ class ScanController:
                 if image_id in local_scan_cache[qualified_repo].keys():
                     current_time = int(time.time())
                     try:
-                        if current_time < local_scan_cache[qualified_repo][image_id]['expiry']:
-                            logger.info('Skipping previously scanned %s with image ID "%s"', qualified_repo, image_id)
+                        if (
+                            current_time
+                            < local_scan_cache[qualified_repo][image_id]['expiry']
+                        ):
+                            logger.info(
+                                'Skipping previously scanned %s with image ID "%s"',
+                                qualified_repo,
+                                image_id,
+                            )
                             skipped_containers += 1
                             continue
                     except KeyError as err:
-                        # If this fails, it's likely due to an old cache before expirations were implemented
-                        # Rebuild the cache
-                        logger.warning('KeyError raised on %s. Clearing failed scan cache...', err)
+                        # If this fails, it's likely due to an old cache before
+                        # expirations were implemented - Rebuild the cache
+                        logger.warning(
+                            'KeyError raised on %s. Clearing failed scan cache...', err
+                        )
                         os.remove(self.SCAN_CACHE_FILE)
 
             temp_scan_queue.append(container)
@@ -209,14 +239,17 @@ class ScanController:
             arguments={
                 'StartTimeRange': self._start_time,
                 'EndTimeRange': self._end_time,
-            }
+            },
         )
 
         response_containers = response.get('data', [])
 
         num_returned = len(response_containers)
         if num_returned == self.PAGINATION_MAX:
-            logger.warning('Warning! The maximum number of active containers (%s) was returned.', self.PAGINATION_MAX)
+            logger.warning(
+                'Warning! The maximum number of active containers (%s) was returned.',
+                self.PAGINATION_MAX,
+            )
         logger.info('Found %s active containers...', num_returned)
 
         return response_containers
@@ -241,15 +274,17 @@ class ScanController:
     def _get_inline_scanner_access_token(self):
         logger.info('Looking for existing Inline Scanner...')
 
-        response = self._lw_client.container_registries.search(json={
-            'filters': [
-                {
-                    'expression': 'eq',
-                    'field': 'name',
-                    'value': self.SCANNER_INTEGRATION_NAME
-                }
-            ]
-        })
+        response = self._lw_client.container_registries.search(
+            json={
+                'filters': [
+                    {
+                        'expression': 'eq',
+                        'field': 'name',
+                        'value': self.SCANNER_INTEGRATION_NAME,
+                    }
+                ]
+            }
+        )
 
         for integration in response.get('data', []):
             logger.info('Inline Scanner found.')
@@ -266,8 +301,8 @@ class ScanController:
             logger.info('%s:%s', container['REPO'], container['TAG'])
 
     def _load_scan_cache(self):
-        # To prevent issues reading/writing only load the failed scan cache from disk once
-        # Otherwise, we'll just reference the variable
+        # To prevent issues reading/writing only load the failed scan cache from disk
+        # once. Otherwise, we'll just reference the variable
         if self.scan_cache:
             return self.scan_cache
 
@@ -279,9 +314,13 @@ class ScanController:
                 try:
                     return json.loads(scan_cache.read())
                 except Exception as err:
-                    # If this fails, it's likely due to an old cache before expirations were implemented
-                    # Rebuild the cache
-                    logger.warning('Error loading failed scan cache: %s. Clearing failed scan cache...', err)
+                    # If this fails, it's likely due to an old cache before expirations
+                    # were implemented - Rebuild the cache
+                    logger.warning(
+                        'Error loading failed scan cache: %s. Clearing failed scan '
+                        'cache...',
+                        err,
+                    )
                     os.remove(self.SCAN_CACHE_FILE)
                     return {}
         else:
@@ -314,15 +353,10 @@ class ScanController:
         else:
             local_scan_cache = self.scan_cache
 
-        scan_data = {
-            'status': status,
-            'expiry': expiry_time
-        }
+        scan_data = {'status': status, 'expiry': expiry_time}
 
         if qualified_repo not in local_scan_cache.keys():
-            local_scan_cache[qualified_repo] = {
-                image_id: scan_data
-            }
+            local_scan_cache[qualified_repo] = {image_id: scan_data}
         else:
             local_scan_cache[qualified_repo][image_id] = scan_data
 
@@ -339,16 +373,30 @@ class ScanController:
         with ThreadPoolExecutor(max_workers=self.WORKER_THREADS) as executor:
             for container in self.scan_queue:
 
-                registry, repository, image_id, tag = self._parse_container_attributes(container)
+                registry, repository, image_id, tag = self._parse_container_attributes(
+                    container
+                )
 
                 if tag == '':
-                    error_message = f'Skipped {registry}/{repository} as the tag was empty.'
+                    error_message = (
+                        f'Skipped {registry}/{repository} as the tag was empty.'
+                    )
                     logger.info(error_message)
-                    self._update_scan_cache(f'{registry}/{repository}', image_id, error_message)
+                    self._update_scan_cache(
+                        f'{registry}/{repository}', image_id, error_message
+                    )
                     continue
 
                 total_count += 1
-                self.create_scan_task(executor, executor_tasks, registry, repository, image_id, tag, total_count)
+                self.create_scan_task(
+                    executor,
+                    executor_tasks,
+                    registry,
+                    repository,
+                    image_id,
+                    tag,
+                    total_count,
+                )
 
             progress_count = 0
             for task in as_completed(executor_tasks):
@@ -356,38 +404,65 @@ class ScanController:
                 result = task.result()
                 if result:
                     logger.info(
-                        'Finished scanning %s:%s. (%s of %s)', result['repository'], result['tag'], progress_count, total_count
+                        'Finished scanning %s:%s. (%s of %s)',
+                        result['repository'],
+                        result['tag'],
+                        progress_count,
+                        total_count,
                     )
                     if result['status'] != 'Success':
                         scan_errors.append(result)
-                    self._update_scan_cache(result['repository'], result['image_id'], result['status'])
+                    self._update_scan_cache(
+                        result['repository'], result['image_id'], result['status']
+                    )
 
         if scan_errors:
-            logger.info("""\nImages erroring out on scan listed below.  Common issues include the following:
-            - The container base image OS is unsupported.
-            - The container isn't accessible through currently configured credentials.
-            For a list of supported base images, see: https://docs.lacework.com/container-image-support\n""")
+            logger.info(
+                '\nImages erroring out on scan listed below. Common issues include the '
+                'following:'
+                '\n- The container base image OS is unsupported.'
+                "\n- The container isn\'t accessible through currently configured "
+                'credentials.'
+                '\nFor a list of supported base images, see: '
+                'https://docs.lacework.com/container-image-support\n'
+            )
 
             logger.info('Scan Errors:\n%s', tabulate(scan_errors, headers='keys'))
 
-    def create_scan_task(self, executor, executor_tasks, registry, repository, image_id, tag, i):
+    def create_scan_task(
+        self, executor, executor_tasks, registry, repository, image_id, tag, i
+    ):
         scan_msg = f'Scanning {registry}/{repository} with tag "{tag}" ({i}) '
         scan_runner = None
 
-        if self._inline_scanner_access_token \
-                and (self._inline_scanner_only or registry not in self._enabled_container_registries):
+        if self._inline_scanner_access_token and (
+            self._inline_scanner_only
+            or registry not in self._enabled_container_registries
+        ):
             scan_msg += '(Inline Scanner)'
             logger.info(scan_msg)
             scan_runner = ScanRunner(
-                self._lw_client, 'Inline', registry, repository, image_id, tag,
-                access_token=self._inline_scanner_access_token, account_name=self._lw_client._account
+                self._lw_client,
+                'Inline',
+                registry,
+                repository,
+                image_id,
+                tag,
+                access_token=self._inline_scanner_access_token,
+                account_name=self._lw_client._account,
             )
         elif self._proxy_scanner_addr:
             scan_msg += '(Proxy Scanner)'
             logger.info(scan_msg)
             scan_runner = ScanRunner(
-                self._lw_client, 'Proxy', registry, repository, image_id, tag,
-                proxy_scanner_addr=self._proxy_scanner_addr, proxy_scanner_skip_validation=self._proxy_scanner_skip_validation
+                self._lw_client,
+                'Proxy',
+                registry,
+                repository,
+                image_id,
+                tag,
+                proxy_scanner_addr=self._proxy_scanner_addr,
+                proxy_scanner_skip_validation=self._proxy_scanner_skip_validation,
             )
         else:
             scan_msg += '(Platform Scanner)'

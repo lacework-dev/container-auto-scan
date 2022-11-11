@@ -1,6 +1,6 @@
 [flake8]
 inline-quotes = single
-max-line-length = 127
+max-line-length = 88
 exclude =
     .git/,
     .idea/,
