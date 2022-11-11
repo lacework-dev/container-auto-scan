@@ -42,7 +42,7 @@ class ScanController:
                     binary. (Defaults to 'lw-scanner')
                 :param list_only: A boolean representing whether the ScanController should only list
                     the containers to be scanned.
-                :param proxy_scanner: A string representing the Proxy Scanner address that the 
+                :param proxy_scanner: A string representing the Proxy Scanner address that the
                     ScanController should use.
                 :param proxy_scanner_skip_validation: A boolean representing whether the ScanController
                     should skip certificate validation for the Proxy Scanner.
