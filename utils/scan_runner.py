@@ -4,7 +4,10 @@ import logging
 import os
 import subprocess
 
+import docker
 import requests
+
+from requests.exceptions import HTTPError
 
 from laceworksdk.exceptions import ApiError, RateLimitError
 
@@ -29,6 +32,7 @@ class ScanRunner:
         access_token=None,
         account_name=None,
         inline_scanner_path=None,
+        inline_scanner_prune=None,
         proxy_scanner_addr=None,
         proxy_scanner_skip_validation=None,
     ):
@@ -46,6 +50,7 @@ class ScanRunner:
         self._inline_scanner_path = (
             inline_scanner_path if inline_scanner_path else 'lw-scanner'
         )
+        self._inline_scanner_prune = inline_scanner_prune
 
         self._proxy_scanner_addr = proxy_scanner_addr
         self._proxy_scanner_skip_validation = proxy_scanner_skip_validation
@@ -54,6 +59,10 @@ class ScanRunner:
         self._status = 'Success'
 
         self.result = None
+
+    def __del__(self):
+        if self._inline_scanner_prune:
+            self._prune_image()
 
     def _build_scan_result(self):
         self.result = {
@@ -100,6 +109,19 @@ class ScanRunner:
                 self._status = error_message
 
         logger.debug(output.stdout)
+
+    def _prune_image(self):
+        logger.info(
+            'Attempting to prune image "%s" from docker...', self._qualified_repo
+        )
+
+        try:
+            client = docker.from_env()
+            client.images.remove(f'{self._qualified_repo}:{self._tag}')
+        except HTTPError as error:
+            logger.debug(
+                'Error pruning image from docker: %s', error
+            )
 
     def _initiate_platform_scan(self):
         try:

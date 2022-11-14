@@ -241,6 +241,12 @@ if __name__ == '__main__':
         ),
     )
     parser.add_argument(
+        '--inline-scanner-prune',
+        action='store_true',
+        default=False,
+        help='Once scanning is complete, prune images from the local docker registry',
+    )
+    parser.add_argument(
         '--org-level',
         action='store_true',
         help='Iterate through each Account in an Organization (Platform Scanner Only)',
