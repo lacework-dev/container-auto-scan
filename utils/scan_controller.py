@@ -21,7 +21,6 @@ class ScanController:
 
     SCAN_CACHE_DIR = os.getenv('LW_SCANNER_DATA_DIR', 'cache')
     SCAN_CACHE_FILE = f'{SCAN_CACHE_DIR}/scan_cache.json'
-    SCAN_CACHE_DAYS = 1
     PAGINATION_MAX = 5000
     SCANNER_INTEGRATION_NAME = 'lacework-auto-scan'
     WORKER_THREADS = int(os.getenv('WORKER_THREADS', 10))
@@ -35,6 +34,8 @@ class ScanController:
                 :param auto_integrate_inline_scanner: A boolean representing whether
                     the ScanController should automatically integrate the Inline Scanner
                     into the current account.
+                :param cache_timeout: An integer representing the number of hours in
+                    which to cache scan results before retrying.
                 :param inline_scanner: A boolean representing whether the ScanController
                     should use the Inline Scanner to execute scans.
                 :param inline_scanner_access_token: A string representing the Inline
@@ -66,6 +67,7 @@ class ScanController:
         self._start_time = start_time
         self._end_time = end_time
 
+        self._cache_timeout = args.cache_timeout
         self._inline_scanner_access_token = args.inline_scanner_access_token
         self._inline_scanner_only = args.inline_scanner_only
         self._inline_scanner_path = args.inline_scanner_path
@@ -343,7 +345,7 @@ class ScanController:
 
     def _update_scan_cache(self, qualified_repo, image_id, status):
         current_time = datetime.now(timezone.utc)
-        expiry_time = current_time + timedelta(days=self.SCAN_CACHE_DAYS)
+        expiry_time = current_time + timedelta(hours=self._cache_timeout)
         expiry_time = int(expiry_time.timestamp())
 
         if self._lw_client.subaccount:

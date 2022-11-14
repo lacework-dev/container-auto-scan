@@ -161,6 +161,12 @@ if __name__ == '__main__':
         help='Skip validation of Lacework proxy scanner TLS certificate',
     )
     parser.add_argument(
+        '--cache-timeout',
+        default=24,
+        type=int,
+        help='The number of hours in which to cache scan results before retrying.'
+    )
+    parser.add_argument(
         '--days',
         default=os.environ.get('LOOKBACK_DAYS', None),
         type=int,
