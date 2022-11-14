@@ -18,6 +18,7 @@ example.py
 cache/**/*
 
 # Byte-compiled / optimized files
+__pycache__
 *.py[cod]
 
 # Build artifacts

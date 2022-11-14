@@ -7,7 +7,7 @@ The aim of this project is to make it simple to trigger vulnerability assessment
 
 ## How It Works
 
-1. The script will download a report of all previously scanned containers for a defined "look-back" period. Containers that have already been scanned will be skipped by default. This can be overwritten with the `--rescan` flag.
+1. The script will load a local scan cache of previously scanned containers - if a container has been scanned within the previous day it will be skipped by default. This can be overwritten with the `--rescan` flag.
 2. The script will enumerate all integrated container registries, gathering the domains that can be scanned with the Lacework Platform Scanner. This can be overwritten with the `--registry <registry_domain>` argument.
 3. The script will run a query against the specified Lacework account(s) to gather distinct container repository/tag combinations that have run in the environment over the same "look-back" period.
 4. The script will then issue container scan requests for the un-scanned active containers via the Lacework API, or with the integrated Inline Scanner.
@@ -71,7 +71,7 @@ docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var
   - The `LW_ACCESS_TOKEN` environment variable while setting the `--inline-scanner` argument
   - The `--auto-integrate-inline-scanner` argument (This will automatically create/re-use an integration per-account)
 - The Inline Scanner is currently limited to [60 scans per hour](https://docs.lacework.com/integrate-inline-scanner#scanning-quotas).
-- If you are using the Inline Scanner to scan against images which may be hosted in a remote registry, credentials can be passed into the scanner as a volume mount. For example, inserting `-v /root/.docker/config.json:/root/.docker/config.json` into the example above would pass the current root user's Docker credentials into the container to assume for pull operations. 
+- If you are using the Inline Scanner to scan against images which may be hosted in a remote registry, credentials can be passed into the scanner as a volume mount. For example, inserting `-v /root/.docker/config.json:/root/.docker/config.json` into the example above would pass the current root user's Docker credentials into the container to assume for pull operations.
 
 ### Kubernetes Manifest
 
@@ -88,6 +88,7 @@ If you wish to run this script continuously, there is an example Kubernetes mani
 |       | `--api-secret`                    | `None`  | The Lacework API secret to use                                                                                                                                                   |
 | `-p`  | `--profile`                       | `None`  | The Lacework CLI profile to use                                                                                                                                                  |
 |       | `--proxy-scanner`                 | `None`  | The address of a Lacework proxy scanner: http(s)://[address]:[port]                                                                                                              |
+|       | `--cache-timeout`                 | `24`    | The number of hours in which to cache scan results before retrying.                                                                                                              |
 |       | `--days`                          | `None`  | The number of days in which to search for active containers                                                                                                                      |
 |       | `--hours`                         | `0`     | The number of hours in which to search for active containers                                                                                                                     |
 |       | `--registry`                      | `None`  | The container registry domain(s) for which to issue scans (comma separated)                                                                                                      |
