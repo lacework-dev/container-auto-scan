@@ -45,6 +45,8 @@ class ScanController:
                     scans.
                 :param inline_scanner_path: A string representing the path to the
                     Inline Scanner binary. (Defaults to 'lw-scanner')
+                :param inline_scanner_prune: A boolean representing whether we should
+                    prune docker images on completion.
                 :param list_only: A boolean representing whether the ScanController
                     should only list the containers to be scanned.
                 :param proxy_scanner: A string representing the Proxy Scanner address
@@ -71,6 +73,7 @@ class ScanController:
         self._inline_scanner_access_token = args.inline_scanner_access_token
         self._inline_scanner_only = args.inline_scanner_only
         self._inline_scanner_path = args.inline_scanner_path
+        self._inline_scanner_prune = False
         self._proxy_scanner_addr = args.proxy_scanner
         self._proxy_scanner_skip_validation = args.proxy_scanner_skip_validation
 
@@ -107,6 +110,7 @@ class ScanController:
             or args.inline_scanner_access_token
             or args.auto_integrate_inline_scanner
         ):
+            self._inline_scanner_prune = args.inline_scanner_prune
             self._inline_scanner_access_token = args.inline_scanner_access_token
             # If we're auto integrating the Inline Scanner, get the access token,
             # or create one
@@ -221,6 +225,19 @@ class ScanController:
         logger.info('Skipped containers due to previous result: %s', skipped_containers)
 
         self.scan_queue = temp_scan_queue
+
+    def _get_account_scan_cache(self):
+
+        subaccount = self._lw_client.subaccount
+
+        if subaccount is not None:
+            if subaccount not in self.scan_cache.keys():
+                self.scan_cache[subaccount] = {}
+            account_scan_cache = self.scan_cache[subaccount]
+        else:
+            account_scan_cache = self.scan_cache
+
+        return account_scan_cache
 
     def _get_active_containers(self):
         active_containers = []
@@ -348,19 +365,14 @@ class ScanController:
         expiry_time = current_time + timedelta(hours=self._cache_timeout)
         expiry_time = int(expiry_time.timestamp())
 
-        if self._lw_client.subaccount:
-            if self._lw_client.subaccount not in self.scan_cache.keys():
-                self.scan_cache[self._lw_client.subaccount] = {}
-            local_scan_cache = self.scan_cache[self._lw_client.subaccount]
-        else:
-            local_scan_cache = self.scan_cache
+        account_scan_cache = self._get_account_scan_cache()
 
         scan_data = {'status': status, 'expiry': expiry_time}
 
-        if qualified_repo not in local_scan_cache.keys():
-            local_scan_cache[qualified_repo] = {image_id: scan_data}
+        if qualified_repo not in account_scan_cache.keys():
+            account_scan_cache[qualified_repo] = {image_id: scan_data}
         else:
-            local_scan_cache[qualified_repo][image_id] = scan_data
+            account_scan_cache[qualified_repo][image_id] = scan_data
 
         logger.debug('Updated scan cache: %s', self.scan_cache)
 
@@ -452,6 +464,8 @@ class ScanController:
                 tag,
                 access_token=self._inline_scanner_access_token,
                 account_name=self._lw_client._account,
+                inline_scanner_path=self._inline_scanner_path,
+                inline_scanner_prune=self._inline_scanner_prune,
             )
         elif self._proxy_scanner_addr:
             scan_msg += '(Proxy Scanner)'
