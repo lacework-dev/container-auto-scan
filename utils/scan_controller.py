@@ -228,10 +228,12 @@ class ScanController:
 
     def _get_account_scan_cache(self):
 
-        if self._lw_client.subaccount:
-            if self._lw_client.subaccount not in self.scan_cache.keys():
-                self.scan_cache[self._lw_client.subaccount] = {}
-            account_scan_cache = self.scan_cache[self._lw_client.subaccount]
+        subaccount = self._lw_client.subaccount
+
+        if subaccount is not None:
+            if subaccount not in self.scan_cache.keys():
+                self.scan_cache[subaccount] = {}
+            account_scan_cache = self.scan_cache[subaccount]
         else:
             account_scan_cache = self.scan_cache
 
