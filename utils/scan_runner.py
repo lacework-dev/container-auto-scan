@@ -29,6 +29,7 @@ class ScanRunner:
         repository,
         image_id,
         tag,
+        digest=None,
         access_token=None,
         account_name=None,
         inline_scanner_path=None,
@@ -44,6 +45,12 @@ class ScanRunner:
         self._repository = repository
         self._scan_type = scan_type
         self._tag = tag
+        self._digest = digest
+
+        if self._digest:
+            self._identifier = self._digest
+        else:
+            self._identifier = self._tag
 
         self._access_token = access_token
         self._account_name = account_name
@@ -70,6 +77,7 @@ class ScanRunner:
             'repository': self._qualified_repo,
             'image_id': self._image_id,
             'tag': self._tag,
+            'digest': self._digest,
             'status': self._status,
         }
 
@@ -77,7 +85,7 @@ class ScanRunner:
         # Build the base command
         command = (
             f'{self._inline_scanner_path} image evaluate '
-            f'{self._qualified_repo} {self._tag}'
+            f'{self._qualified_repo} {self._identifier}'
         )
 
         # If an inline scanner access token is provided, use it
@@ -126,7 +134,7 @@ class ScanRunner:
     def _initiate_platform_scan(self):
         try:
             self._lw_client.vulnerabilities.containers.scan(
-                self._registry, self._repository, self._tag
+                self._registry, self._repository, self._identifier
             )
         except RateLimitError as error:
             self._status = f'Received rate limit response from Lacework. Error: {error}'
@@ -134,7 +142,7 @@ class ScanRunner:
         except ApiError as error:
             self._status = (
                 f'Failed to scan container {self._qualified_repo} with tag '
-                f'"{self._tag}". Error: {error}'
+                f'"{self._tag}" and digest "{self._digest}". Error: {error}'
             )
             logger.warning(self._status)
 
@@ -146,7 +154,7 @@ class ScanRunner:
             json = {
                 'registry': self._registry,
                 'image_name': self._repository,
-                'tag': self._tag,
+                'tag': self._identifier,
             }
 
             response = session.post(
@@ -156,7 +164,7 @@ class ScanRunner:
         except Exception as error:
             self._status = (
                 f'Failed to scan container {self._qualified_repo} with tag '
-                f'"{self._tag}". Error: {error}'
+                f'"{self._tag}" and digest "{self._digest}". Error: {error}'
             )
             logger.warning(self._status)
 

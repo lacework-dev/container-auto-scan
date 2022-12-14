@@ -142,15 +142,15 @@ class ScanController:
 
     def _build_container_query(self, registry=None):
 
-        query_text = '{ source { LW_HE_CONTAINERS }'
+        query_text = '{ source { LW_HE_CONTAINERS ct with LW_HE_IMAGES im }'
 
         if registry is not None:
             if registry == 'index.docker.io':
                 registry = 'docker.io'
-            query_text += f" filter {{ starts_with(REPO, '{registry}') }}"
+            query_text += f" filter {{ starts_with(ct.REPO, '{registry}') }}"
         else:
-            query_text += " filter { REPO <> 'none' }"
-        query_text += ' return distinct {REPO, IMAGE_ID, TAG} }'
+            query_text += " filter { ct.REPO <> 'none' }"
+        query_text += ' return distinct {ct.REPO, ct.IMAGE_ID, ct.TAG, im.DIGEST} }'
 
         logger.debug('Active container LQL query: %s', query_text)
 
@@ -190,7 +190,7 @@ class ScanController:
 
         for container in self.scan_queue:
 
-            registry, repository, image_id, tag = self._parse_container_attributes(
+            registry, repository, image_id, _, _ = self._parse_container_attributes(
                 container
             )
 
@@ -349,11 +349,12 @@ class ScanController:
         registry, repository = container['REPO'].split('/', 1)
         image_id = container['IMAGE_ID']
         tag = container['TAG']
+        digest = container['DIGEST']
 
         if registry == 'docker.io':
             registry = 'index.docker.io'
 
-        return registry, repository, image_id, tag
+        return registry, repository, image_id, tag, digest
 
     def _save_scan_cache(self):
         logger.debug('Writing scan cache to disk...')
@@ -387,9 +388,9 @@ class ScanController:
         with ThreadPoolExecutor(max_workers=self.WORKER_THREADS) as executor:
             for container in self.scan_queue:
 
-                registry, repository, image_id, tag = self._parse_container_attributes(
-                    container
-                )
+                (
+                    registry, repository, image_id, tag, digest
+                ) = self._parse_container_attributes(container)
 
                 if tag == '':
                     error_message = (
@@ -409,6 +410,7 @@ class ScanController:
                     repository,
                     image_id,
                     tag,
+                    digest,
                     total_count,
                 )
 
@@ -418,9 +420,10 @@ class ScanController:
                 result = task.result()
                 if result:
                     logger.info(
-                        'Finished scanning %s:%s. (%s of %s)',
+                        'Finished scanning %s %s (Digest: %s). (%s of %s)',
                         result['repository'],
                         result['tag'],
+                        result['digest'],
                         progress_count,
                         total_count,
                     )
@@ -444,7 +447,7 @@ class ScanController:
             logger.info('Scan Errors:\n%s', tabulate(scan_errors, headers='keys'))
 
     def create_scan_task(
-        self, executor, executor_tasks, registry, repository, image_id, tag, i
+        self, executor, executor_tasks, registry, repository, image_id, tag, digest, i
     ):
         scan_msg = f'Scanning {registry}/{repository} with tag "{tag}" ({i}) '
         scan_runner = None
@@ -462,6 +465,7 @@ class ScanController:
                 repository,
                 image_id,
                 tag,
+                digest,
                 access_token=self._inline_scanner_access_token,
                 account_name=self._lw_client._account,
                 inline_scanner_path=self._inline_scanner_path,
@@ -477,6 +481,7 @@ class ScanController:
                 repository,
                 image_id,
                 tag,
+                digest,
                 proxy_scanner_addr=self._proxy_scanner_addr,
                 proxy_scanner_skip_validation=self._proxy_scanner_skip_validation,
             )
@@ -484,7 +489,7 @@ class ScanController:
             scan_msg += '(Platform Scanner)'
             logger.info(scan_msg)
             scan_runner = ScanRunner(
-                self._lw_client, 'Platform', registry, repository, image_id, tag
+                self._lw_client, 'Platform', registry, repository, image_id, tag, digest
             )
 
         executor_tasks.append(executor.submit(scan_runner.scan))
