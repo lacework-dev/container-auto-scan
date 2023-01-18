@@ -224,7 +224,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--inline-scanner-access-token',
-        default=None,
+        default=os.environ.get('LW_ACCESS_TOKEN', None),
         type=str,
         help=(
             'Inline Scanner authentication token (in production environments it is '
