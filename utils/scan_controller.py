@@ -156,6 +156,56 @@ class ScanController:
 
         return query_text
 
+        
+        
+    
+    def _build_container_assessment_cache(self,registry=None):
+        logger.info(f'Fetching container assessments since "{self._start_time}"...')
+
+        query = {
+        "timeFilter": { "startTime": self._start_time, "endTime": self._end_time },
+        "filters": [ { "field": "severity", "expression": "in", "values": [ "Critical", "High", "Medium" ,"Low","Info"] } ],
+         "returns": [ "imageId", "evalCtx" ]
+        }
+        scanned_containers=[]
+        vulns_conts = self._lw_client.vulnerabilities.containers.search(json=query)
+        for h in vulns_conts:
+                scanned_containers=scanned_containers+h['data']
+
+        logger.info('Building container assessment cache...')
+
+        returned_containers = 0
+        scanned_container_cache = {}
+
+        for scanned_container in scanned_containers:
+            
+            registry = scanned_container['evalCtx']['image_info']['registry']
+            repository = scanned_container['evalCtx']['image_info']['repo']
+            image_id = scanned_container['imageId']
+            # tags = scanned_container['IMAGE_TAGS']
+
+            # Images scanned by the inline already contains the registry name
+            if repository.startswith(registry):
+                qualified_repo = f'{repository}'
+            else:
+                qualified_repo = f'{registry}/{repository}'
+            qualified_repo = qualified_repo.lstrip('/')
+            qualified_repo = qualified_repo.replace('http://', '').replace('https://', '')
+
+            if qualified_repo not in scanned_container_cache.keys():
+                scanned_container_cache[qualified_repo] = [image_id]
+            else:
+                if image_id not in scanned_container_cache[qualified_repo]:
+                    scanned_container_cache[qualified_repo].append(image_id)
+
+            returned_containers += 1
+
+        logger.info(f'Previously Assessed Container Count: {returned_containers}')
+        logger.debug(json.dumps(scanned_container_cache, indent=4))
+
+        return scanned_container_cache
+
+
     def _create_inline_scanner_integration(self):
         logger.info('Creating new Inline Scanner...')
 
@@ -180,7 +230,7 @@ class ScanController:
         skipped_containers = 0
 
         temp_scan_queue = []
-
+        scanned_container_cache = self._build_container_assessment_cache()
         if self._lw_client.subaccount:
             if self._lw_client.subaccount not in self.scan_cache.keys():
                 self.scan_cache[self._lw_client.subaccount] = {}
@@ -195,6 +245,13 @@ class ScanController:
             )
 
             qualified_repo = f'{registry}/{repository}'
+
+            # Skip if the container was previously scanned in the current window
+            if qualified_repo in scanned_container_cache.keys():
+                if image_id in scanned_container_cache[qualified_repo]:
+                    logger.info(f'Skipping previously scanned {qualified_repo} with image ID "{image_id}"')
+                    skipped_containers += 1
+                    continue
 
             # Skip if the container has a previous scan within the current window
             if qualified_repo in local_scan_cache.keys():
