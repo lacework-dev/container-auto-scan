@@ -24,7 +24,7 @@ spec:
         app: lacework-auto-scan
     spec:
       containers:
-      - image: alannix/container-auto-scan:latest
+      - image: lacework/container-auto-scan:latest
         name: lacework-auto-scan
         args: ["-d"]
         env:

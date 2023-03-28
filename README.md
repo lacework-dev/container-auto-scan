@@ -1,7 +1,7 @@
 # Lacework Auto Scanner
 
 ![Build Status](https://github.com/lacework-dev/container-auto-scan/actions/workflows/python-test.yml/badge.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/alannix/container-auto-scan)
+![Docker Pulls](https://img.shields.io/docker/pulls/lacework/container-auto-scan)
 
 The aim of this project is to make it simple to trigger vulnerability assessments for containers which are active in a Lacework account/organization.
 
@@ -22,7 +22,7 @@ The default "look-back" period is 1 day, but can be augmented with the `--days <
 The easiest way to run this script is by executing it as a container using Lacework API credentials provided from your Lacework CLI configuration:
 
 ```bash
-docker run -v ~/.lacework.toml:/home/user/.lacework.toml alannix/container-auto-scan
+docker run -v ~/.lacework.toml:/home/user/.lacework.toml lacework/container-auto-scan
 ```
 
 This will mount your Lacework CLI credentials into the container and execute the scan on the default profile. You can, of course, pass in a different profile with the `-p <profile>` argument as outlined [here](#user-content-arguments). Or you can provide credentials using the `--account`, `--subaccount`, `--api-key`, `--api-secret` arguments.
@@ -48,7 +48,7 @@ Due to permissions and dependency requirements for Docker-in-Docker, a new conta
 In order to run the Docker-in-Docker container, you'll execute the following:
 
 ```bash
-docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
+docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock lacework/container-auto-scan-inline --inline-scanner-access-token <SCANNER_ACCESS_TOKEN_HERE>
 ```
 
 ### Inline Scanner Auto Integration
@@ -58,7 +58,7 @@ As of version `0.5` of this script, the Inline Scanner integration (and subseque
 This option is extra beneficial when paired with the `--org-level` argument, as all inline scanner integrations will be automatically generated across an entire Lacework organization.
 
 ```bash
-docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock alannix/container-auto-scan-inline --org-level --auto-integrate-inline-scanner
+docker run -v ~/.lacework.toml:/root/.lacework.toml -v /var/run/docker.sock:/var/run/docker.sock lacework/container-auto-scan-inline --org-level --auto-integrate-inline-scanner
 ```
 
 #### Things to Note
