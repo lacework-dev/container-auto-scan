@@ -20,8 +20,8 @@ jobs:
       LW_ACCOUNT_NAME: ${{ secrets.LW_ACCOUNT_NAME }}
       LW_SCANNER_SAVE_RESULTS: true
       LW_SCANNER_SCAN_LIBRARY_PACKAGES: true
-      DOCKER_REPO: alannix/container-auto-scan-inline
-      DOCKER_TEST_NAME: alannix/container-auto-scan-inline-test
+      DOCKER_REPO: lacework/container-auto-scan-inline
+      DOCKER_TEST_NAME: lacework/container-auto-scan-inline-test
     steps:
 
       - name: Checkout
