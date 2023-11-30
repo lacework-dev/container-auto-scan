@@ -1,9 +1,9 @@
 # Lacework Auto Scanner
 
 ![Build Status](https://github.com/lacework-dev/container-auto-scan/actions/workflows/python-test.yml/badge.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/lacework/container-auto-scan)
+![Docker Pulls]This project aims to make it simple to trigger vulnerability assessments for containers that are active in a Lacework account/organization.
 
-The aim of this project is to make it simple to trigger vulnerability assessments for containers which are active in a Lacework account/organization.
+Lacework Auto Scanner is an open-source project. It is NOT supported by Lacework. Lacework provides no guarantee of quality or functionality.
 
 ## How It Works
 
